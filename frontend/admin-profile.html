@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Summary - E-Learning</title>
+  <link rel="stylesheet" href="assets/css/style.css" />
+  <style>
+    .admin-wrap { max-width:1100px; margin:0 auto; padding:36px 5% 64px; }
+    .profile-band { background:#fff; border:1px solid var(--border); border-radius:var(--radius); padding:24px; display:flex; align-items:center; justify-content:space-between; gap:18px; margin-bottom:24px; box-shadow:var(--shadow); }
+    .profile-band h1 { color:var(--primary); font-family:var(--font-display); font-size:1.55rem; }
+    .profile-band p { color:var(--text-light); margin-top:4px; }
+    .admin-nav-active { background:rgba(255,255,255,.14); color:#fff !important; }
+    .stats-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:16px; margin-bottom:26px; }
+    .stat-card { background:#fff; border:1px solid var(--border); border-radius:var(--radius); padding:20px; box-shadow:var(--shadow); }
+    .stat-card strong { display:block; color:var(--primary); font-family:var(--font-display); font-size:2rem; line-height:1; margin-bottom:8px; }
+    .stat-card span { color:var(--text-light); font-size:.82rem; }
+    .users-panel { background:#fff; border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; box-shadow:var(--shadow); }
+    .users-panel h2 { color:var(--primary); font-family:var(--font-display); font-size:1.1rem; padding:18px 20px; border-bottom:1px solid var(--border); }
+    .users-table { width:100%; border-collapse:collapse; }
+    .users-table th { background:#f7f4ef; color:var(--primary); text-align:left; font-size:.8rem; padding:12px 16px; }
+    .users-table td { color:var(--text-mid); border-top:1px solid var(--border); padding:12px 16px; font-size:.84rem; }
+    .role-pill { display:inline-flex; padding:4px 9px; border-radius:20px; background:#eef2f7; color:var(--primary); font-weight:700; font-size:.72rem; text-transform:uppercase; }
+    .empty-state,.error-state { text-align:center; padding:36px 20px; color:var(--text-light); }
+    .error-state { color:#9f3434; }
+    @media (max-width:680px) { .profile-band { align-items:flex-start; flex-direction:column; } .users-panel { overflow-x:auto; } }
+  </style>
+</head>
+<body>
+  <nav class="navbar">
+    <div class="logo"><a href="admin-dashboard.html" style="color:inherit;text-decoration:none;">E-<span>Learning</span></a></div>
+    <ul class="nav-links">
+      <li><a href="admin-dashboard.html">Home</a></li>
+      <li><a href="admin-courses.html">Courses</a></li>
+      <li><a class="admin-nav-active" href="admin-profile.html">Admin</a></li>
+      <li><a href="#" id="nav-logout" style="color:rgba(255,255,255,.75);">Logout</a></li>
+    </ul>
+  </nav>
+
+  <main class="admin-wrap">
+    <section class="profile-band">
+      <div>
+        <h1 id="admin-name">Admin Summary</h1>
+        <p id="admin-email"></p>
+      </div>
+      <a class="btn btn-primary" href="admin-courses.html">Review Courses</a>
+    </section>
+
+    <section class="stats-grid" id="stats-grid">
+      <div class="empty-state">Loading summary...</div>
+    </section>
+
+    <section class="users-panel">
+      <h2>Users</h2>
+      <div id="users-list"><div class="empty-state">Loading users...</div></div>
+    </section>
+  </main>
+
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/script.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      requireAdmin();
+      document.getElementById('admin-name').textContent = getUserName();
+      document.getElementById('admin-email').textContent = localStorage.getItem('lh_user_email') || '';
+      document.getElementById('nav-logout').addEventListener('click', logoutAdmin);
+      loadSummary();
+      loadUsers();
+    });
+
+    function requireAdmin() {
+      if (!isLoggedIn()) {
+        window.location.href = 'signin.html';
+        return;
+      }
+      if (getRole() !== 'admin') {
+        redirectToDashboard(getRole());
+      }
+    }
+
+    async function loadSummary() {
+      const container = document.getElementById('stats-grid');
+      try {
+        const response = await fetch(`${API_URL}/courses/admin/summary`, {
+          headers: { Authorization: `Bearer ${getToken()}` }
+        });
+        const summary = await response.json();
+        if (!response.ok) throw new Error(summary.message || 'Could not load summary.');
+        const stats = [
+          ['Total Users', summary.total_users],
+          ['Total Courses', summary.total_courses],
+          ['Under Review', summary.pending_courses],
+          ['Approved', summary.approved_courses],
+          ['Published', summary.published_courses],
+          ['Rejected', summary.rejected_courses],
+          ['Enrollments', summary.total_enrollments]
+        ];
+        container.innerHTML = stats.map(([label, value]) => `
+          <article class="stat-card">
+            <strong>${Number(value || 0)}</strong>
+            <span>${escapeCourseText(label)}</span>
+          </article>
+        `).join('');
+      } catch (error) {
+        container.innerHTML = `<div class="error-state">${escapeCourseText(error.message)}</div>`;
+      }
+    }
+
+    async function loadUsers() {
+      const container = document.getElementById('users-list');
+      try {
+        const response = await fetch(`${API_URL}/auth/users`, {
+          headers: { Authorization: `Bearer ${getToken()}` }
+        });
+        const users = await response.json();
+        if (!response.ok) throw new Error(users.message || 'Could not load users.');
+        if (!users.length) {
+          container.innerHTML = '<div class="empty-state">No users found.</div>';
+          return;
+        }
+        container.innerHTML = `
+          <table class="users-table">
+            <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Joined</th></tr></thead>
+            <tbody>${users.map(user => `
+              <tr>
+                <td>${escapeCourseText(user.name)}</td>
+                <td>${escapeCourseText(user.email)}</td>
+                <td><span class="role-pill">${escapeCourseText(user.role)}</span></td>
+                <td>${escapeCourseText(formatDate(user.created_at))}</td>
+              </tr>
+            `).join('')}</tbody>
+          </table>
+        `;
+      } catch (error) {
+        container.innerHTML = `<div class="error-state">${escapeCourseText(error.message)}</div>`;
+      }
+    }
+
+    function logoutAdmin(event) {
+      event.preventDefault();
+      logout();
+      localStorage.removeItem('lh_role');
+      window.location.href = 'signin.html';
+    }
+
+    function formatDate(value) {
+      const date = new Date(value);
+      if (!value || Number.isNaN(date.getTime())) return '';
+      return date.toLocaleDateString([], { year:'numeric', month:'short', day:'numeric' });
+    }
+  </script>
+</body>
+</html>

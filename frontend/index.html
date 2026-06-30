@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>E-Learning - Organization Learning Platform</title>
+  <link rel="stylesheet" href="assets/css/style.css" />
+</head>
+<body>
+  <nav class="navbar">
+    <div class="logo">E-Learning</div>
+    <ul class="nav-links">
+      <li><a href="index.html">Home</a></li>
+      <li><a href="#courses-section">Courses</a></li>
+      <li><a href="signin.html" id="nav-signin" class="btn-nav-signin">Sign In</a></li>
+      <li><a href="signup.html" id="nav-signup" class="btn-nav-signup">Sign Up</a></li>
+      <li><a href="#" id="nav-user" style="display:none;color:#fff;font-weight:600;"></a></li>
+      <li><a href="#" id="nav-logout" style="display:none;color:rgba(255,255,255,.7);">Logout</a></li>
+    </ul>
+  </nav>
+
+  <section class="hero">
+    <h1>Education Courses</h1>
+    <p>Build practical skills with courses created by E-Learning tutors.</p>
+    <div class="search-bar">
+      <input type="text" id="search-input" placeholder="Search for a course..." />
+      <button id="search-btn">Search</button>
+    </div>
+  </section>
+
+  <section class="section" id="courses-section">
+    <div class="section-header">
+      <h2 class="section-title">Published Courses</h2>
+    </div>
+    <div class="courses-grid" id="homepage-courses">
+      <div style="grid-column:1/-1;text-align:center;color:var(--text-light);padding:36px;">Loading published courses...</div>
+    </div>
+  </section>
+
+  <div class="enroll-banner">
+    <div><h3>Ready to start learning?</h3></div>
+    <div class="banner-btns">
+      <a href="signup.html" class="btn btn-accent">Sign Up Free</a>
+      <a href="#courses-section" class="btn btn-outline" style="border-color:rgba(255,255,255,.4);color:#fff;">Explore Courses</a>
+    </div>
+  </div>
+
+  <div class="popup-overlay" id="popup-overlay">
+    <div class="popup-box">
+      <div class="popup-icon">i</div>
+      <h3>Notice</h3>
+      <p>Message here.</p>
+      <button class="btn btn-primary popup-close-btn" style="width:100%;margin-top:4px;">OK</button>
+    </div>
+  </div>
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/script.js"></script>
+</body>
+</html>

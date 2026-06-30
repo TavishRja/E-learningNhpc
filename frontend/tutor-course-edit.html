@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Opening Course Editor - E-Learning</title>
+</head>
+<body>
+  <script>
+    const courseId = Number(new URLSearchParams(window.location.search).get('courseId'));
+    window.location.replace(
+      Number.isInteger(courseId) && courseId > 0
+        ? `course-player.html?courseId=${courseId}`
+        : 'tutor-courses.html'
+    );
+  </script>
+</body>
+</html>

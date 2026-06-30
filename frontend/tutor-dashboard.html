@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tutor Home - E-Learning</title>
+  <link rel="stylesheet" href="assets/css/style.css" />
+  <style>
+    .dash-wrap { max-width:1100px; margin:0 auto; padding:42px 5% 64px; }
+    .welcome { display:flex; justify-content:space-between; align-items:center; gap:20px; padding:30px; margin-bottom:28px; border-radius:var(--radius); background:linear-gradient(135deg,var(--primary),var(--primary-light)); color:#fff; box-shadow:var(--shadow); }
+    .welcome h1 { font-family:var(--font-display); font-size:1.7rem; margin-bottom:6px; }
+    .welcome p { color:rgba(255,255,255,.72); }
+    .stats { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:16px; }
+    .stat-card { background:#fff; border:1px solid var(--border); border-radius:var(--radius); padding:24px; box-shadow:var(--shadow); }
+    .stat-card strong { display:block; color:var(--primary); font-family:var(--font-display); font-size:2rem; }
+    .stat-card span { color:var(--text-light); font-size:.82rem; }
+    .quick-actions { display:flex; gap:12px; margin-top:28px; flex-wrap:wrap; }
+    @media(max-width:760px) { .stats { grid-template-columns:repeat(2,1fr); } .welcome { align-items:flex-start; flex-direction:column; } }
+    @media(max-width:420px) { .stats { grid-template-columns:1fr; } .quick-actions .btn { width:100%; } }
+  </style>
+</head>
+<body>
+  <nav class="navbar">
+    <div class="logo"><a href="index.html" style="color:inherit;text-decoration:none;">E-Learning</a></div>
+    <ul class="nav-links">
+      <li><a href="tutor-dashboard.html">Home</a></li>
+      <li><a href="tutor-courses.html">My Courses</a></li>
+      <li><a href="#" id="nav-logout">Logout</a></li>
+    </ul>
+  </nav>
+
+  <main class="dash-wrap">
+    <section class="welcome">
+      <div>
+        <h1 id="welcome-name">Tutor Dashboard</h1>
+        <p id="welcome-email"></p>
+      </div>
+      <span>Tutor Overview</span>
+    </section>
+
+    <section class="stats">
+      <article class="stat-card"><strong id="total-courses">0</strong><span>Total Courses</span></article>
+      <article class="stat-card"><strong id="draft-courses">0</strong><span>Draft Courses</span></article>
+      <article class="stat-card"><strong id="pending-courses">0</strong><span>In Review</span></article>
+      <article class="stat-card"><strong id="published-courses">0</strong><span>Published Courses</span></article>
+    </section>
+
+    <div class="quick-actions">
+      <a class="btn btn-accent" href="tutor-create-course.html">+ Create Course</a>
+      <a class="btn btn-primary" href="tutor-courses.html">My Courses</a>
+    </div>
+  </main>
+
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/script.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      if (!isLoggedIn() || getRole() !== 'tutor') {
+        window.location.href = 'signin.html';
+        return;
+      }
+      document.getElementById('welcome-name').textContent = `Welcome, ${getUserName()}`;
+      document.getElementById('welcome-email').textContent = localStorage.getItem('lh_user_email') || '';
+      const response = await fetch(`${API_URL}/courses/my`, {
+        headers: { Authorization: `Bearer ${getToken()}` }
+      });
+      const courses = await response.json();
+      if (!response.ok || !Array.isArray(courses)) {
+        showToast(courses.message || 'Could not load course overview.', 'error');
+        return;
+      }
+      document.getElementById('total-courses').textContent = courses.length;
+      document.getElementById('draft-courses').textContent = courses.filter(course => course.status === 'draft').length;
+      document.getElementById('pending-courses').textContent = courses.filter(course => ['submitted', 'under_review'].includes(course.status)).length;
+      document.getElementById('published-courses').textContent = courses.filter(course => course.status === 'published').length;
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,1997 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Cache-Control" content="no-store" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  <title>Learning Page - E-Learning</title>
+  <link rel="stylesheet" href="assets/css/style.css" />
+  <style>
+    .player-layout { display:grid; grid-template-columns:310px minmax(0,1fr); min-height:calc(100vh - 64px); }
+    .sidebar { background:var(--primary); color:#fff; padding:24px 0; overflow-y:auto; height:calc(100vh - 64px); position:sticky; top:64px; }
+    .sidebar-heading { padding:0 22px 18px; border-bottom:1px solid rgba(255,255,255,.12); }
+    .sidebar-heading small { color:rgba(255,255,255,.55); text-transform:uppercase; letter-spacing:.08em; }
+    .sidebar-heading h2 { font-family:var(--font-display); font-size:1rem; line-height:1.4; margin-top:6px; }
+    .sidebar-tools { display:none; padding:14px 20px 6px; gap:8px; flex-wrap:wrap; }
+    .sidebar-tools.show { display:flex; }
+    .sidebar-tools .btn { flex:1; min-width:120px; padding:8px 10px; font-size:.75rem; }
+    .sidebar-tools .btn-outline { color:#fff; border-color:rgba(255,255,255,.7); background:rgba(255,255,255,.08); }
+    .sidebar-tools .btn-outline:hover { background:rgba(255,255,255,.16); }
+    .chapter-list { padding-top:8px; }
+    .sidebar-section { padding:14px 20px 7px; color:rgba(255,255,255,.55); font-size:.72rem; font-weight:700; text-transform:uppercase; letter-spacing:.06em; }
+    .sidebar-section-row { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:4px 10px 0 14px; }
+    .sidebar-section-row .sidebar-section { flex:1; }
+    .sidebar-section-title { flex:1; border:0; background:transparent; color:rgba(255,255,255,.65); text-align:left; padding:10px 4px; cursor:pointer; font:inherit; font-size:.72rem; font-weight:700; text-transform:uppercase; letter-spacing:.06em; }
+    .sidebar-add-btn { min-width:92px; height:34px; padding:0 12px; border:1px solid rgba(255,255,255,.45); background:rgba(255,255,255,.08); color:#fff; border-radius:20px; cursor:pointer; font:inherit; font-size:.72rem; font-weight:700; white-space:nowrap; }
+    .sidebar-add-btn:hover { background:rgba(255,255,255,.16); border-color:rgba(255,255,255,.75); }
+    .drag-handle { color:rgba(255,255,255,.45); cursor:grab; padding:8px 2px; user-select:none; }
+    .dragging { opacity:.45; }
+    .drag-over { outline:2px dashed var(--accent-light); outline-offset:-3px; }
+    .chapter-item-row { display:flex; align-items:stretch; }
+    .chapter-item-row .chapter-item { flex:1; min-width:0; }
+    .sidebar-add-section { width:calc(100% - 36px); margin:18px; padding:10px; border:1px dashed rgba(255,255,255,.35); border-radius:8px; background:transparent; color:#fff; cursor:pointer; font:inherit; font-weight:700; }
+    .chapter-item { width:100%; display:flex; align-items:flex-start; gap:12px; padding:14px 20px; border:0; border-left:3px solid transparent; background:transparent; color:rgba(255,255,255,.78); text-align:left; cursor:pointer; font-family:inherit; }
+    .chapter-item:hover { background:rgba(255,255,255,.07); }
+    .chapter-item.active { background:rgba(255,255,255,.13); border-left-color:var(--accent-light); color:#fff; }
+    .chapter-number { width:27px; height:27px; flex:0 0 27px; border-radius:50%; display:grid; place-items:center; background:rgba(255,255,255,.15); font-size:.72rem; font-weight:700; }
+    .chapter-number.completed { background:#1f9d55; color:#fff; }
+    .chapter-name { font-size:.84rem; line-height:1.45; padding-top:3px; }
+    .player-content { min-width:0; background:var(--bg); }
+    .player-topbar { background:#fff; border-bottom:1px solid var(--border); padding:16px 28px; display:flex; justify-content:space-between; align-items:center; gap:16px; }
+    .topbar-actions { display:flex; align-items:center; justify-content:flex-end; gap:9px; flex-wrap:wrap; }
+    #role-actions { display:flex; align-items:center; justify-content:flex-end; gap:10px; flex-wrap:wrap; }
+    .edit-mode-button.active { background:var(--accent); border-color:var(--accent); color:#fff; }
+    .course-status { padding:5px 10px; border-radius:20px; background:#eef2f7; color:var(--text-mid); font-size:.72rem; font-weight:700; text-transform:uppercase; }
+    .deny-button { color:#b42318; border-color:#b42318; }
+    .player-topbar small { color:var(--text-light); }
+    .player-topbar h1 { font-family:var(--font-display); color:var(--primary); font-size:1.1rem; margin-top:3px; }
+    .chapter-progress { color:var(--text-light); font-size:.82rem; white-space:nowrap; }
+    .progress-meter { min-width:160px; display:grid; gap:5px; color:var(--text-mid); font-size:.76rem; font-weight:700; }
+    .progress-meter strong { color:#1f9d55; }
+    .progress-track { display:block; width:100%; height:7px; border-radius:20px; background:#e7edf3; overflow:hidden; }
+    .progress-fill { display:block; height:100%; width:0; border-radius:inherit; background:#1f9d55; transition:width .2s ease; }
+    #generate-certificate-btn:disabled {
+      opacity:.5;
+      cursor:not-allowed;
+      filter:saturate(.35);
+      box-shadow:none;
+      pointer-events:none;
+    }
+    .completion-card { border:1px solid #bfe5cf; background:#f1fbf5; color:#1f6b3d; }
+    .completion-card h2 { color:#1f6b3d; }
+    .certificate-modal { position:fixed; inset:0; background:rgba(12,22,34,.72); z-index:300; display:none; align-items:center; justify-content:center; padding:22px; }
+    .certificate-modal.show { display:flex; }
+    .certificate-dialog { width:min(980px,100%); height:min(720px,92vh); background:#fff; border-radius:10px; display:grid; grid-template-rows:auto 1fr; overflow:hidden; box-shadow:0 24px 70px rgba(0,0,0,.3); }
+    .certificate-head { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:14px 18px; border-bottom:1px solid var(--border); }
+    .certificate-head h2 { font-family:var(--font-display); color:var(--primary); font-size:1.1rem; }
+    .certificate-actions { display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
+    .certificate-frame { width:100%; height:100%; border:0; background:#f1f5f9; }
+    .feedback-modal { position:fixed; inset:0; background:rgba(12,22,34,.72); z-index:320; display:none; align-items:center; justify-content:center; padding:22px; }
+    .feedback-modal.show { display:flex; }
+    .feedback-dialog { width:min(620px,100%); background:#fff; border-radius:10px; padding:22px; box-shadow:0 24px 70px rgba(0,0,0,.3); }
+    .feedback-dialog h2 { color:var(--primary); font-family:var(--font-display); font-size:1.2rem; margin-bottom:8px; }
+    .feedback-dialog p { color:var(--text-mid); line-height:1.55; font-size:.9rem; margin-bottom:12px; }
+    .feedback-dialog textarea { width:100%; min-height:170px; border:1px solid var(--border); border-radius:8px; padding:12px; font:inherit; color:var(--text-dark); resize:vertical; outline:none; }
+    .feedback-dialog textarea:focus { border-color:var(--primary-light); box-shadow:0 0 0 3px rgba(42,91,132,.12); }
+    .feedback-actions { display:flex; justify-content:flex-end; gap:9px; margin-top:14px; }
+    .lesson-wrap { max-width:1050px; margin:0 auto; padding:30px; }
+    .viewer-container { position:relative; width:100%; }
+    .viewer { width:100%; min-height:420px; aspect-ratio:16/9; background:#171821; border-radius:var(--radius); overflow:hidden; box-shadow:var(--shadow-hover); display:flex; align-items:center; justify-content:center; color:#fff; }
+    .viewer iframe,.viewer video { width:100%; height:100%; min-height:420px; border:0; background:#171821; }
+    .viewer-empty { text-align:center; padding:40px; color:rgba(255,255,255,.72); }
+    .viewer-empty strong { display:block; color:#fff; font-size:1.05rem; margin-bottom:8px; }
+    .viewer-controls { position:absolute; inset:0; pointer-events:none; display:flex; align-items:center; justify-content:space-between; padding:18px; }
+    .viewer-controls button { pointer-events:auto; width:48px; height:48px; border-radius:50%; border:1px solid rgba(255,255,255,.35); background:rgba(255,255,255,.08); color:#fff; display:inline-flex; align-items:center; justify-content:center; cursor:pointer; transition:transform .2s ease, background .2s ease, border-color .2s ease; }
+    .viewer-controls button:hover { transform:translateY(-1px); background:rgba(255,255,255,.18); border-color:rgba(255,255,255,.65); }
+    .viewer-controls button:disabled { opacity:.35; cursor:not-allowed; transform:none; }
+    .viewer-controls svg { width:22px; height:22px; fill:currentColor; }
+    .lesson-card { background:#fff; border:1px solid var(--border); border-radius:var(--radius); padding:26px; margin-top:22px; }
+    .lesson-card h2 { font-family:var(--font-display); color:var(--primary); font-size:1.3rem; margin-bottom:12px; }
+    .lesson-description { color:var(--text-mid); line-height:1.75; font-size:.92rem; }
+    .lesson-description p,.lesson-description div { margin:0 0 8px; }
+    .lesson-tabs { display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin-top:22px; }
+    .lesson-tab { display:inline-flex; align-items:center; justify-content:center; gap:8px; border:1px solid var(--border); background:#fff; color:var(--text-dark); padding:10px 16px; border-radius:999px; cursor:pointer; font:inherit; font-weight:700; transition:all .2s ease; }
+    .lesson-tab.active { border-color:var(--accent); background:var(--accent); color:#fff; }
+    .lesson-tab:hover { background:rgba(59,130,246,.08); }
+    .tab-panels { margin-top:18px; }
+    .tab-panel { display:none; }
+    .tab-panel.active { display:block; }
+    .resource-row { display:flex; flex-wrap:wrap; align-items:center; gap:12px; margin-top:18px; }
+    .resource-note { color:var(--text-light); font-size:.8rem; }
+    .resources-card { background:#fff; border:1px solid var(--border); border-radius:var(--radius); padding:24px; margin-top:22px; }
+    .resources-card h2 { font-family:var(--font-display); color:var(--primary); font-size:1.15rem; margin-bottom:14px; }
+    .resources-head { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:14px; }
+    .resources-head h2 { margin-bottom:0; }
+    .resources-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:10px; }
+    .resource-item { display:flex; align-items:center; gap:10px; padding:12px 14px; border:1px solid var(--border); border-radius:8px; background:#faf8f5; color:var(--primary); cursor:pointer; text-align:left; font:inherit; }
+    .resource-item:hover { border-color:var(--primary-light); background:#f2f7fb; }
+    .resource-kind { font-size:.7rem; color:var(--text-light); text-transform:uppercase; }
+    .preview-card { background:#fff; border:1px solid var(--border); border-radius:var(--radius); padding:28px; margin-top:22px; }
+    .preview-card h2 { font-family:var(--font-display); color:var(--primary); font-size:1.35rem; margin-bottom:10px; }
+    .preview-card p { color:var(--text-mid); line-height:1.65; margin-bottom:16px; }
+    .preview-lock { display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; padding:16px; border:1px solid #d9e5ef; border-radius:8px; background:#f2f7fb; color:var(--primary); }
+    .preview-lock strong { display:block; font-size:.95rem; margin-bottom:3px; }
+    .preview-lock span { color:var(--text-mid); font-size:.82rem; }
+    .nav-row { display:flex; justify-content:space-between; gap:12px; margin-top:20px; }
+    .nav-icon-btn { width:48px; height:48px; padding:0; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; border:1px solid var(--border); background:#fff; color:var(--primary); cursor:pointer; transition:all .2s ease; }
+    .nav-icon-btn:hover { transform:translateY(-1px); border-color:var(--accent); color:var(--accent); }
+    .nav-icon-btn:disabled { opacity:.45; cursor:not-allowed; transform:none; }
+    .nav-icon-btn svg { width:18px; height:18px; fill:currentColor; }
+    .discussion-card { background:#fff; border:1px solid var(--border); border-radius:var(--radius); padding:26px; margin-top:22px; }
+    .discussion-head { display:flex; justify-content:space-between; align-items:flex-start; gap:16px; margin-bottom:18px; }
+    .discussion-head h2 { font-family:var(--font-display); color:var(--primary); font-size:1.2rem; margin-bottom:5px; }
+    .discussion-head p { color:var(--text-light); font-size:.82rem; }
+    .discussion-form textarea,.reply-form textarea { width:100%; border:1px solid var(--border); border-radius:var(--radius-sm); padding:12px 14px; font:inherit; color:var(--text-dark); background:var(--bg); resize:vertical; outline:none; }
+    .discussion-form textarea:focus,.reply-form textarea:focus { border-color:var(--primary-light); background:#fff; }
+    .discussion-form textarea { min-height:90px; }
+    .discussion-form-actions { display:flex; justify-content:flex-end; margin-top:10px; }
+    .discussion-list { display:grid; gap:16px; margin-top:24px; }
+    .doubt-item { border:1px solid var(--border); border-radius:var(--radius-sm); padding:18px; background:#fcfbf9; }
+    .doubt-meta,.reply-meta { color:var(--text-light); font-size:.75rem; }
+    .doubt-question { color:var(--text-dark); line-height:1.65; margin:9px 0 13px; white-space:pre-wrap; }
+    .doubt-actions { display:flex; flex-wrap:wrap; align-items:center; gap:10px; }
+    .text-action { border:0; background:transparent; color:var(--primary-light); font:inherit; font-size:.78rem; font-weight:700; cursor:pointer; padding:0; }
+    .mail-action { color:var(--accent); }
+    .replies { margin-top:16px; padding-left:18px; border-left:3px solid #e7e0d7; display:grid; gap:11px; }
+    .reply-item { background:#fff; border:1px solid var(--border); border-radius:8px; padding:12px 14px; }
+    .reply-text { color:var(--text-mid); font-size:.86rem; line-height:1.55; margin-top:5px; white-space:pre-wrap; }
+    .reply-form { display:none; margin-top:14px; }
+    .reply-form.show { display:block; }
+    .reply-form textarea { min-height:65px; }
+    .reply-form-actions { display:flex; justify-content:flex-end; gap:8px; margin-top:8px; }
+    .discussion-empty { text-align:center; color:var(--text-light); padding:24px 10px 8px; }
+    .state-message { margin:50px auto; max-width:650px; padding:35px; text-align:center; background:#fff; border:1px solid var(--border); border-radius:var(--radius); color:var(--text-mid); }
+    .tutor-editor { display:none; max-width:1050px; margin:24px auto 0; padding:0 30px; }
+    .tutor-editor.show { display:block; }
+    .editor-card { background:#fff; border:1px solid var(--border); border-radius:var(--radius); padding:22px; box-shadow:var(--shadow); }
+    .editor-head { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:18px; }
+    .editor-head h2 { color:var(--primary); font-family:var(--font-display); font-size:1.2rem; }
+    .editor-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+    .editor-grid .full { grid-column:1/-1; }
+    .editor-grid input,.editor-grid select,.editor-grid textarea,.section-edit-row input { width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:8px; font:inherit; background:#fff; }
+    .editor-grid textarea { min-height:90px; resize:vertical; }
+    .html-editor { min-height:130px; padding:12px; border:1px solid var(--border); border-radius:8px; background:#fff; overflow:auto; }
+    .rich-toolbar { display:flex; gap:6px; padding:7px; border:1px solid var(--border); border-bottom:0; border-radius:8px 8px 0 0; background:#f7f4ef; }
+    .rich-toolbar button { border:1px solid var(--border); background:#fff; border-radius:5px; padding:5px 9px; cursor:pointer; }
+    .rich-toolbar + .html-editor { border-radius:0 0 8px 8px; }
+    .editor-actions { display:flex; gap:9px; flex-wrap:wrap; margin-top:14px; }
+    .content-editor-section { border:1px solid var(--border); border-radius:10px; overflow:hidden; margin-top:14px; }
+    .section-edit-row { display:grid; grid-template-columns:1fr auto; gap:9px; padding:12px; background:#f1ece5; }
+    .chapter-edit-block { padding:14px; border-top:1px solid var(--border); }
+    .chapter-edit-summary { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+    .chapter-edit-summary strong { color:var(--primary); }
+    .chapter-edit-summary small { display:block; color:var(--text-light); margin-top:3px; }
+    .chapter-edit-form { display:none; margin-top:14px; padding:14px; background:#faf8f5; border-radius:8px; }
+    .chapter-edit-form.show { display:block; }
+    .resource-chips { display:flex; flex-wrap:wrap; gap:7px; margin-top:10px; }
+    .resource-chip { display:inline-flex; align-items:center; gap:7px; padding:6px 9px; border:1px solid var(--border); border-radius:20px; background:#fff; font-size:.75rem; }
+    .resource-chip button { border:0; background:transparent; color:#b42318; cursor:pointer; font-weight:700; }
+    .inline-create { margin-top:16px; padding:16px; border:1px dashed var(--border); border-radius:10px; background:#fcfbf9; }
+    .inline-create h3 { color:var(--primary); font-size:1rem; margin-bottom:12px; }
+    .creator-card { background:#fff; border:1px solid var(--border); border-radius:var(--radius); padding:22px; margin-bottom:20px; }
+    .creator-card h2,.creator-card h3 { color:var(--primary); font-family:var(--font-display); margin-bottom:14px; }
+    .creator-subtext { color:var(--text-light); font-size:.82rem; margin:-8px 0 14px; }
+    .content-choice { display:flex; gap:10px; margin-bottom:14px; }
+    .content-choice label { flex:1; padding:12px; border:1px solid var(--border); border-radius:8px; cursor:pointer; }
+    .content-choice label:has(input:checked) { border-color:var(--primary-light); background:#f2f7fb; }
+    .current-content { color:var(--text-light); font-size:.8rem; margin-bottom:10px; }
+    .creator-resources { display:grid; gap:9px; margin-bottom:14px; }
+    .creator-resource { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 12px; border:1px solid var(--border); border-radius:8px; }
+    @media (max-width:800px) {
+      .player-layout { grid-template-columns:1fr; }
+      .sidebar { position:static; height:auto; max-height:360px; }
+      .lesson-wrap { padding:18px; }
+      .player-topbar { padding:14px 18px; }
+      .viewer,.viewer iframe,.viewer video { min-height:240px; }
+      .tutor-editor { padding:0 18px; }
+      .editor-grid { grid-template-columns:1fr; }
+      .editor-grid .full { grid-column:auto; }
+    }
+  </style>
+</head>
+<body>
+  <nav class="navbar">
+    <div class="logo"><a href="index.html" style="color:inherit;text-decoration:none;">E-<span>Learning</span></a></div>
+    <ul class="nav-links">
+      <li><a href="student-dashboard.html" style="color:rgba(255,255,255,.8);">Back to Dashboard</a></li>
+      <li><a href="#" id="nav-user" style="color:#fff;font-weight:600;"></a></li>
+      <li><a href="#" id="nav-logout" style="color:rgba(255,255,255,.75);">Logout</a></li>
+    </ul>
+  </nav>
+
+  <main class="player-layout">
+    <aside class="sidebar">
+      <div class="sidebar-heading">
+        <small>Course content</small>
+        <h2 id="sidebar-course">Loading course...</h2>
+      </div>
+      <div class="sidebar-tools" id="sidebar-tools"></div>
+      <div class="chapter-list" id="chapter-list"></div>
+    </aside>
+
+    <section class="player-content">
+      <div class="player-topbar">
+        <div>
+          <small id="course-label">E-Learning course</small>
+          <h1 id="chapter-title">Loading chapter...</h1>
+        </div>
+        <div class="topbar-actions">
+          <span class="course-status" id="course-status" hidden></span>
+          <div class="chapter-progress" id="chapter-progress"></div>
+          <div id="role-actions"></div>
+        </div>
+      </div>
+
+      <div class="tutor-editor" id="tutor-editor"></div>
+      <div class="lesson-wrap" id="lesson-wrap">
+        <div class="state-message">Loading your course content...</div>
+      </div>
+    </section>
+  </main>
+
+  <div class="certificate-modal" id="certificate-modal" aria-hidden="true">
+    <div class="certificate-dialog">
+      <div class="certificate-head">
+        <h2>Certificate Preview</h2>
+        <div class="certificate-actions">
+          <button class="btn btn-primary" type="button" onclick="downloadCertificatePreview()">Download PDF</button>
+          <button class="btn btn-outline" type="button" onclick="closeCertificatePreview()">Close</button>
+        </div>
+      </div>
+      <iframe class="certificate-frame" id="certificate-preview-frame" title="Certificate preview"></iframe>
+    </div>
+  </div>
+
+  <div class="feedback-modal" id="review-feedback-modal" aria-hidden="true">
+    <div class="feedback-dialog">
+      <h2 id="review-feedback-title">Admin Feedback</h2>
+      <p id="review-feedback-message">Add feedback for the tutor.</p>
+      <textarea id="review-feedback-text" maxlength="3000"></textarea>
+      <div class="feedback-actions">
+        <button class="btn btn-outline" type="button" id="review-feedback-cancel">Cancel</button>
+        <button class="btn btn-accent" type="button" id="review-feedback-submit">Submit</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/script.js"></script>
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const courseId = Number(params.get('courseId'));
+    const openInEditMode = params.get('edit') === '1';
+    const viewerRole = getRole();
+    let studentPreviewMode = viewerRole === 'student' && params.get('preview') === '1';
+    let course = null;
+    let sections = [];
+    let chapters = [];
+    let currentChapter = -1;
+    let activePdfUrl = null;
+    let activeVideoUrl = null;
+    let activeTutorPanel = '';
+    let tutorEditMode = viewerRole === 'tutor' && openInEditMode;
+    let draggedSectionId = null;
+    let draggedChapterId = null;
+    let draggedChapterSectionId = null;
+    let activeCertificateUrl = null;
+    let contentRenderToken = 0;
+    let lastClosedChapterId = null;
+    let progressState = {
+      progressPercent: 0,
+      lastChapterId: null,
+      completedChapterIds: new Set(),
+      completedAt: null
+    };
+    let currentVideoEnded = false;
+    let currentVideoProgressRatio = 0;
+    const activeResourceUrls = [];
+
+    document.addEventListener('DOMContentLoaded', () => {
+      if (!isLoggedIn()) {
+        window.location.href = 'signin.html';
+        return;
+      }
+      if (!Number.isInteger(courseId) || courseId < 1) {
+        showState('A valid course was not selected.');
+        return;
+      }
+
+      document.getElementById('nav-user').textContent = getUserName();
+      const dashboardLink = document.querySelector('.nav-links a');
+      dashboardLink.href = `${viewerRole}-dashboard.html`;
+      if (viewerRole === 'tutor') {
+        dashboardLink.textContent = 'Home';
+        dashboardLink.closest('li').insertAdjacentHTML(
+          'afterend',
+          '<li><a href="tutor-courses.html" style="color:rgba(255,255,255,.8);">My Courses</a></li>'
+        );
+      }
+      loadCourse();
+    });
+
+    document.getElementById('nav-logout').addEventListener('click', (event) => {
+      event.preventDefault();
+      recordActiveChapterClosed(true);
+      releasePdfUrl();
+      releaseVideoUrl();
+      releaseResourceUrls();
+      logout();
+      localStorage.removeItem('lh_role');
+      window.location.href = 'signin.html';
+    });
+
+    async function loadCourse(options = {}) {
+      try {
+        const selectedChapterId = Number(options.selectedChapterId || chapters[currentChapter]?.id || 0);
+        const addChapterSectionId = Number(options.openAddChapterForSectionId || 0);
+        const endpoint = studentPreviewMode
+          ? `${API_URL}/courses/${courseId}/details`
+          : `${API_URL}/courses/${courseId}/content`;
+        const response = await fetch(endpoint, {
+          cache: 'no-store',
+          headers: { Authorization: `Bearer ${getToken()}` }
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message || 'Could not load course content.');
+
+        course = data.course;
+        if (studentPreviewMode && Number(course.is_enrolled) === 1) {
+          studentPreviewMode = false;
+          await loadCourse(options);
+          return;
+        }
+        if (viewerRole === 'admin' && course.status === 'draft') {
+          course.status = 'under_review';
+        }
+        sections = Array.isArray(data.sections) ? data.sections : [];
+        chapters = sections.flatMap(section =>
+          section.lectures.map(lecture => ({ ...lecture, section_title: section.title }))
+        );
+        updateProgressState(data.progress || {});
+        document.title = `${course.title} - E-Learning`;
+        document.getElementById('sidebar-course').textContent = course.title;
+        document.getElementById('course-label').textContent =
+          course.tutor_name ? `${course.title} by ${course.tutor_name}` : course.title;
+        configureRoleControls();
+
+        renderSidebar();
+        if (chapters.length) {
+          const selectedIndex = chapters.findIndex(chapter => chapter.id === selectedChapterId);
+          const resumeIndex = chapters.findIndex(chapter => chapter.id === progressState.lastChapterId);
+          selectChapter(selectedIndex >= 0 ? selectedIndex : resumeIndex >= 0 ? resumeIndex : 0);
+        } else {
+          if (viewerRole === 'tutor' && tutorEditMode && addChapterSectionId) {
+            openNewChapterEditor(addChapterSectionId);
+          } else if (viewerRole === 'tutor' && tutorEditMode && !sections.length) {
+            openNewSectionEditor();
+          } else {
+            document.getElementById('chapter-title').textContent = 'No chapters yet';
+            document.getElementById('chapter-progress').textContent = '';
+            showState(viewerRole === 'tutor' && tutorEditMode
+              ? 'Add a chapter from the sidebar to start building this course.'
+              : 'This course does not have any chapters yet.');
+          }
+        }
+        if (viewerRole === 'tutor' && activeTutorPanel) renderTutorEditor(activeTutorPanel);
+      } catch (error) {
+        document.getElementById('chapter-title').textContent = 'Content unavailable';
+        showState(error.message, true);
+      }
+    }
+
+    function renderSidebar() {
+      const chapterList = document.getElementById('chapter-list');
+      let lectureIndex = 0;
+      chapterList.innerHTML = sections.map(section => `
+        <div class="sidebar-section-group" data-section-id="${section.id}"
+          ${viewerRole === 'tutor' && tutorEditMode ? `
+            draggable="true"
+            ondragstart="startSectionDrag(event,${section.id})"
+          ondragover="allowSectionDrop(event,${section.id})"
+            ondragleave="clearDragOver(event)"
+            ondrop="dropSection(event,${section.id})"
+            ondragend="clearDragState()"
+          ` : ''}>
+        <div class="sidebar-section-row">
+          ${viewerRole === 'tutor' && tutorEditMode ? `
+            <span class="drag-handle" title="Drag section">::</span>
+            <button class="sidebar-section-title" onclick="openSectionEditor(${section.id})">${escapeHtml(section.title)}</button>
+            <button class="sidebar-add-btn" onclick="openNewChapterEditor(${section.id})">Add chapter</button>
+          ` : `<div class="sidebar-section">${escapeHtml(section.title)}</div>`}
+        </div>
+        ${section.lectures.map(chapter => {
+          const index = lectureIndex++;
+          return `
+            <div class="chapter-item-row" data-chapter-id="${chapter.id}"
+              ${viewerRole === 'tutor' && tutorEditMode ? `
+                draggable="true"
+                ondragstart="startChapterDrag(event,${chapter.id},${section.id})"
+                ondragover="allowChapterDrop(event,${section.id})"
+                ondragleave="clearDragOver(event)"
+                ondrop="dropChapter(event,${chapter.id},${section.id})"
+                ondragend="clearDragState()"
+              ` : ''}>
+              ${viewerRole === 'tutor' && tutorEditMode ? '<span class="drag-handle" title="Drag chapter">::</span>' : ''}
+              <button class="chapter-item" id="chapter-${index}" onclick="selectChapter(${index})">
+                <span class="chapter-number ${isChapterCompleted(chapter.id) ? 'completed' : ''}">${isChapterCompleted(chapter.id) ? '&#10003;' : ''}</span>
+                <span class="chapter-name">${escapeHtml(chapter.title)}</span>
+              </button>
+            </div>
+          `;
+        }).join('')}
+        </div>
+      `).join('');
+      if (viewerRole === 'tutor' && tutorEditMode) {
+        chapterList.insertAdjacentHTML('beforeend', '<button class="sidebar-add-section" onclick="openNewSectionEditor()">+ Add Section</button>');
+      }
+    }
+
+    function configureRoleControls() {
+      const status = document.getElementById('course-status');
+      const roleActions = document.getElementById('role-actions');
+      const sidebarTools = document.getElementById('sidebar-tools');
+      status.hidden = false;
+      status.textContent = statusLabel(course.status);
+      roleActions.innerHTML = '';
+      sidebarTools.innerHTML = '';
+      sidebarTools.classList.remove('show');
+
+      if (viewerRole === 'admin') {
+        roleActions.innerHTML = `
+          ${course.status === 'delete_requested'
+            ? '<button class="btn btn-accent" onclick="reviewCourse(\'approved\')">Approve Delete</button><button class="btn btn-outline" onclick="reviewCourse(\'rejected\')">Keep Published</button>'
+            : `${['draft', 'submitted', 'under_review'].includes(course.status) ? '<button class="btn btn-accent" onclick="reviewCourse(\'approved\')">Approve</button><button class="btn btn-outline" onclick="reviewCourse(\'changes_requested\')">Request Changes</button>' : ''}
+               ${course.status === 'approved' ? '<button class="btn btn-accent" onclick="reviewCourse(\'published\')">Publish</button>' : ''}
+               ${course.status === 'published' ? '<button class="btn btn-outline deny-button" onclick="reviewCourse(\'unpublished\')">Unpublish</button>' : ''}
+               ${course.status === 'unpublished' ? '<button class="btn btn-accent" onclick="reviewCourse(\'published\')">Publish</button>' : ''}`}
+        `;
+      }
+
+      if (viewerRole === 'tutor') {
+        sidebarTools.classList.add('show');
+        sidebarTools.innerHTML = `
+          ${tutorEditMode ? `
+            <button class="btn btn-outline" onclick="toggleTutorEditor('course')">Edit Details</button>
+          ` : '<span style="font-size:.75rem;color:rgba(255,255,255,.7);">Enable Edit Mode to manage course content.</span>'}
+        `;
+        roleActions.innerHTML = `
+          <button class="btn btn-outline edit-mode-button ${tutorEditMode ? 'active' : ''}" onclick="toggleEditMode()">
+            ${tutorEditMode ? 'Exit' : 'Edit Chapters'}
+          </button>
+          ${['draft', 'rejected', 'changes_requested', 'unpublished'].includes(course.status)
+            ? '<button class="btn btn-accent" onclick="submitCourseForReview()">Submit for Review</button>'
+            : ''}
+          ${course.status === 'delete_requested'
+            ? '<span class="course-status">Delete requested</span>'
+            : ''}
+          <button class="btn btn-outline deny-button" onclick="deleteTutorCourse()">Delete Course</button>
+        `;
+      }
+      renderProgressSummary();
+    }
+
+    function statusLabel(status) {
+      return {
+        draft: 'Draft',
+        submitted: 'Submitted',
+        under_review: 'Under Review',
+        approved: 'Approved',
+        published: 'Published',
+        unpublished: 'Unpublished',
+        rejected: 'Rejected',
+        changes_requested: 'Changes Requested',
+        delete_requested: 'Delete Requested'
+      }[status] || 'Draft';
+    }
+
+    function updateProgressState(progress) {
+      progressState = {
+        progressPercent: Number(progress.progress_percent ?? progress.progressPercent ?? 0),
+        lastChapterId: progress.last_chapter_id ?? progress.lastChapterId ?? null,
+        completedChapterIds: new Set((progress.completed_chapter_ids || progress.completedChapterIds || []).map(Number)),
+        completedAt: progress.completed_at || progress.completedAt || null
+      };
+    }
+
+    function getCompletionPercent() {
+      return Number(progressState.progressPercent || 0);
+    }
+
+    function getCompletedLectureCount() {
+      return progressState.completedChapterIds.size;
+    }
+
+    function getCurrentLectureVisualWeight() {
+      const chapter = chapters[currentChapter];
+      if (!chapter || chapter.main_content_type !== 'video' || isChapterCompleted(chapter.id)) return 0;
+      return Math.max(0, Math.min(1, currentVideoProgressRatio || 0));
+    }
+
+    function getDisplayedProgressPercent() {
+      const totalLectures = chapters.length;
+      if (!totalLectures) return 0;
+      const visualCompleted = Math.min(totalLectures, getCompletedLectureCount() + getCurrentLectureVisualWeight());
+      return Math.round(((visualCompleted / totalLectures) * 100) * 100) / 100;
+    }
+
+    function canGenerateCertificate() {
+      return viewerRole === 'student' && !studentPreviewMode && getCompletionPercent() >= 100;
+    }
+
+    function isChapterCompleted(chapterId) {
+      return progressState.completedChapterIds.has(Number(chapterId));
+    }
+
+    function renderProgressSummary() {
+      const roleActions = document.getElementById('role-actions');
+      if (viewerRole !== 'student' || !roleActions) return;
+      if (studentPreviewMode) {
+        roleActions.innerHTML = '<button class="btn btn-accent" type="button" onclick="enrollFromPreview(this)">Enroll</button>';
+        return;
+      }
+      const exactPercent = getDisplayedProgressPercent();
+      const percent = Math.max(0, Math.min(100, Math.round(exactPercent)));
+      const certificateEnabled = canGenerateCertificate();
+      roleActions.innerHTML = `
+        <div class="progress-meter" aria-label="Course progress">
+          <span><strong>${percent}%</strong> complete</span>
+          <span class="progress-track"><span class="progress-fill" style="width:${Math.min(percent, 100)}%"></span></span>
+        </div>
+        <button class="btn btn-accent" id="generate-certificate-btn" type="button" onclick="return generateCertificate(event)" ${certificateEnabled ? '' : 'disabled'} title="${certificateEnabled ? 'Generate your completion certificate' : 'Complete the course to 100% to unlock the certificate'}">Generate Certificate</button>
+      `;
+    }
+
+    function updateChapterProgressLabel(index) {
+      const chapter = chapters[index];
+      const chapterProgress = document.getElementById('chapter-progress');
+      if (!chapterProgress || !chapter) return;
+      const visualPercent = Math.max(0, Math.min(100, Math.round(getDisplayedProgressPercent())));
+      chapterProgress.textContent =
+        studentPreviewMode
+          ? `${chapter.section_title} | Lecture ${index + 1} of ${chapters.length}`
+          : viewerRole === 'student'
+          ? `${chapter.section_title} | Lecture ${index + 1} of ${chapters.length} | ${visualPercent}% complete`
+          : `${chapter.section_title} | Lecture ${index + 1} of ${chapters.length}`;
+    }
+
+    function syncStudentProgressUi() {
+      renderProgressSummary();
+      if (viewerRole === 'student' && currentChapter >= 0) {
+        updateChapterProgressLabel(currentChapter);
+      }
+    }
+
+    function updateCurrentVideoPlayback(video) {
+      const chapter = chapters[currentChapter];
+      if (!video || !chapter || chapter.main_content_type !== 'video' || isChapterCompleted(chapter.id)) return;
+      const duration = Number(video.duration || 0);
+      if (!Number.isFinite(duration) || duration <= 0) return;
+      currentVideoProgressRatio = Math.max(0, Math.min(1, Number(video.currentTime || 0) / duration));
+      syncStudentProgressUi();
+    }
+
+    async function selectChapter(index) {
+      if (index < 0 || index >= chapters.length) return;
+      if (viewerRole === 'student' && !studentPreviewMode && index !== currentChapter) {
+        recordChapterClosed(chapters[currentChapter]?.id);
+      }
+      currentChapter = index;
+      lastClosedChapterId = null;
+      releasePdfUrl();
+      releaseVideoUrl();
+
+      document.querySelectorAll('.chapter-item').forEach(item => item.classList.remove('active'));
+      document.getElementById(`chapter-${index}`)?.classList.add('active');
+
+      const chapter = chapters[index];
+      currentVideoEnded = chapter.main_content_type !== 'video' || isChapterCompleted(chapter.id);
+      currentVideoProgressRatio = isChapterCompleted(chapter.id) ? 1 : 0;
+      document.getElementById('chapter-title').textContent = chapter.title;
+      updateChapterProgressLabel(index);
+
+      if (studentPreviewMode) {
+        renderPreviewChapter(chapter);
+        return;
+      }
+
+      if (viewerRole === 'tutor' && tutorEditMode) {
+        renderChapterCreator(chapter);
+        return;
+      }
+
+      const lessonWrap = document.getElementById('lesson-wrap');
+      lessonWrap.innerHTML = `
+        <div class="viewer-container">
+          <div class="viewer" id="content-viewer">
+            <div class="viewer-empty"><strong>Loading lesson...</strong></div>
+          </div>
+          <div class="viewer-controls">
+            <button class="viewer-nav-btn" type="button" onclick="selectChapter(${index - 1})" ${index === 0 ? 'disabled' : ''} aria-label="Previous lecture">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.41 16.59L10.83 12l4.58-4.59L14 6l-6 6 6 6z"></path></svg>
+            </button>
+            <button class="viewer-nav-btn" id="next-lecture-btn" type="button" onclick="${viewerRole === 'student' ? `completeAndContinue(${index})` : `selectChapter(${index + 1})`}" ${viewerRole !== 'student' && index === chapters.length - 1 ? 'disabled' : ''} aria-label="Next lecture">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6z"></path></svg>
+            </button>
+          </div>
+        </div>
+        <div class="lesson-tabs">
+          <button class="lesson-tab active" type="button" data-tab="resources" onclick="switchLessonTab('resources')">References / Resources</button>
+          <button class="lesson-tab" type="button" data-tab="completed" onclick="switchLessonTab('completed')">Course Completed</button>
+          <button class="lesson-tab" type="button" data-tab="discussion" onclick="switchLessonTab('discussion')">Doubts &amp; Discussion</button>
+          ${viewerRole === 'student' ? `<button class="lesson-tab" type="button" data-tab="feedback" onclick="switchLessonTab('feedback')">Course Feedback</button>` : ''}
+        </div>
+        <div class="tab-panels">
+          <section class="resources-card tab-panel active" id="tab-resources">
+            <div class="resources-head">
+              <h2>References / Resources</h2>
+            </div>
+            <div id="chapter-resources"></div>
+          </section>
+          <section class="lesson-card completion-card tab-panel" id="tab-completed" ${canGenerateCertificate() ? '' : 'hidden'}>
+            <h2>Course Completed</h2>
+            <p class="lesson-description">You have completed every lecture. Your certificate is ready to generate.</p>
+          </section>
+          <section class="discussion-card tab-panel" id="tab-discussion">
+            <div class="discussion-head">
+              <div>
+                <h2>Doubts &amp; Discussion</h2>
+                <p>${viewerRole === 'student'
+                  ? 'Ask questions and help other enrolled students with this lecture.'
+                  : 'Preview the enrolled student discussion for this lecture.'}</p>
+              </div>
+            </div>
+            ${viewerRole === 'student' ? `
+              <form class="discussion-form" onsubmit="postQuestion(event, ${chapter.id})">
+                <textarea id="question-input" maxlength="2000" placeholder="What would you like help understanding?" required></textarea>
+                <div class="discussion-form-actions">
+                  <button class="btn btn-primary" type="submit">Post Question</button>
+                </div>
+              </form>
+            ` : ''}
+            <div class="discussion-list" id="discussion-list">
+              <div class="discussion-empty">Loading discussion...</div>
+            </div>
+          </section>
+          ${viewerRole === 'student' ? `
+            <section class="discussion-card tab-panel" id="tab-feedback">
+              <div class="discussion-head">
+                <div>
+                  <h2>Course Feedback</h2>
+                  <p>Your feedback will be emailed directly to the tutor.</p>
+                </div>
+              </div>
+              <form class="discussion-form" onsubmit="sendTutorFeedback(event,${chapter.id})">
+                <textarea maxlength="3000" placeholder="Share your feedback about this course or chapter..." required></textarea>
+                <div class="discussion-form-actions">
+                  <button class="btn btn-primary" type="submit">Send Feedback</button>
+                </div>
+              </form>
+            </section>
+          ` : ''}
+        </div>
+      `;
+
+      if (viewerRole === 'student') saveLastOpened(chapter.id);
+      await renderMainContent(chapter);
+      renderResources(chapter);
+      loadDiscussion(chapter.id);
+      updateNextButtonState();
+      switchLessonTab('resources');
+    }
+
+    function renderPreviewChapter(chapter) {
+      const lessonWrap = document.getElementById('lesson-wrap');
+      lessonWrap.innerHTML = `
+        <section class="preview-card">
+          <h2>${escapeHtml(chapter.title)}</h2>
+          <p>${escapeHtml(courseDescriptionText(course.description) || 'This published course is ready to explore.')}</p>
+          <div class="preview-lock">
+            <div>
+              <strong>Content unlocks after enrollment</strong>
+              <span>You can review the section and chapter names now. Enroll to open videos, PDFs, resources, discussions, and progress tracking.</span>
+            </div>
+            <button class="btn btn-accent" type="button" onclick="enrollFromPreview(this)">Enroll</button>
+          </div>
+        </section>
+      `;
+    }
+
+    async function enrollFromPreview(trigger) {
+      if (trigger) {
+        trigger.disabled = true;
+        trigger.textContent = 'Enrolling...';
+      }
+      try {
+        const data = await apiEnroll(courseId);
+        if (!data.enrolled) throw new Error(data.message || 'Enrollment failed.');
+        showToast(data.message || 'Enrolled successfully!', 'success');
+        studentPreviewMode = false;
+        await loadCourse();
+      } catch (error) {
+        showToast(error.message || 'Enrollment failed.', 'error');
+        if (trigger) {
+          trigger.disabled = false;
+          trigger.textContent = 'Enroll';
+        }
+      }
+    }
+
+    function renderChapterCreator(chapter) {
+      activeTutorPanel = '';
+      renderTutorEditor('');
+      const resources = Array.isArray(chapter.resources) ? chapter.resources : [];
+      document.getElementById('lesson-wrap').innerHTML = `
+        <section class="creator-card">
+          <h2>Edit Chapter</h2>
+          <div class="editor-grid">
+            <div class="form-group full">
+              <label>Chapter Title</label>
+              <input id="creator-title" value="${escapeAttribute(chapter.title)}" />
+            </div>
+          </div>
+        </section>
+        <section class="creator-card">
+          <h3>Main Content</h3>
+          <p class="creator-subtext">Each chapter uses one main item: a video or a PDF.</p>
+          <div class="current-content">Current content: <strong>${chapter.main_content_type === 'pdf' ? 'PDF' : chapter.main_content_type === 'video' ? 'Video' : 'None'}</strong></div>
+          <div class="content-choice">
+            <label><input type="radio" name="creator-content-type" value="video" onchange="toggleCreatorContentInputs()" ${chapter.main_content_type !== 'pdf' ? 'checked' : ''} /> Video</label>
+            <label><input type="radio" name="creator-content-type" value="pdf" onchange="toggleCreatorContentInputs()" ${chapter.main_content_type === 'pdf' ? 'checked' : ''} /> PDF</label>
+          </div>
+          <div class="editor-grid">
+            <div class="form-group" id="creator-video-group">
+              <label>Upload / Replace Video</label>
+              <input type="file" id="creator-video" accept="video/*" onchange="previewSelectedMainContent()" />
+            </div>
+            <div class="form-group" id="creator-pdf-group">
+              <label>Upload / Replace PDF</label>
+              <input type="file" id="creator-pdf" accept=".pdf,application/pdf" onchange="previewSelectedMainContent()" />
+            </div>
+          </div>
+          <div class="viewer" id="content-viewer" style="margin-top:18px;">
+            <div class="viewer-empty"><strong>Loading preview...</strong></div>
+          </div>
+        </section>
+        <section class="creator-card">
+          <h3>References / Resources</h3>
+          <div class="creator-resources">
+            ${resources.length ? resources.map(resource => `
+              <div class="creator-resource">
+                <button class="text-action" onclick="openChapterResource(${resource.id},'${resource.resource_type}','${encodeURIComponent(resource.external_url || '')}')">${escapeHtml(resource.title)}</button>
+                <span>
+                  <button class="text-action" onclick="editResourceInline(${resource.id},'${resource.resource_type}','${encodeURIComponent(resource.title)}','${encodeURIComponent(resource.external_url || '')}')">Edit</button>
+                  <button class="text-action deny-button" onclick="deleteResourceInline(${resource.id})">Delete</button>
+                </span>
+              </div>
+            `).join('') : '<span class="resource-note">No references added yet.</span>'}
+          </div>
+          <div class="editor-grid">
+            <div class="form-group">
+              <label>Add Reference PDFs</label>
+              <input type="file" id="creator-resource-pdfs" accept=".pdf,application/pdf" multiple />
+            </div>
+            <div class="form-group">
+              <label>Add Reference Images</label>
+              <input type="file" id="creator-resource-images" accept="image/*" multiple />
+            </div>
+            <div class="form-group full">
+              <label>Add External Links</label>
+              <textarea id="creator-resource-links" placeholder="One per line: Title | https://example.com"></textarea>
+            </div>
+          </div>
+        </section>
+        <div class="editor-actions">
+          <button class="btn btn-primary" type="button" onclick="saveCreatorChapter(event, ${chapter.id})">Save Changes</button>
+          <button class="btn btn-outline deny-button" type="button" onclick="deleteChapterInline(${chapter.id})">Delete Chapter</button>
+        </div>
+      `;
+      toggleCreatorContentInputs();
+    }
+
+    function richTextToolbar(editorId) {
+      return `
+        <div class="rich-toolbar">
+          <button type="button" onclick="formatRichEditor('${editorId}','bold')"><strong>B</strong></button>
+          <button type="button" onclick="formatRichEditor('${editorId}','italic')"><em>I</em></button>
+          <button type="button" onclick="formatRichEditor('${editorId}','underline')"><u>U</u></button>
+          <button type="button" onclick="formatRichEditor('${editorId}','insertUnorderedList')">List</button>
+        </div>
+      `;
+    }
+
+    function formatRichEditor(editorId, command) {
+      const editor = document.getElementById(editorId);
+      if (!editor) return;
+      editor.focus();
+      document.execCommand(command, false);
+    }
+
+    function toggleCreatorContentInputs(isNew = false) {
+      const prefix = isNew ? 'creator-new' : 'creator';
+      const name = isNew ? 'creator-new-type' : 'creator-content-type';
+      const type = document.querySelector(`input[name="${name}"]:checked`)?.value || 'video';
+      const videoGroup = document.getElementById(`${prefix}-video-group`);
+      const pdfGroup = document.getElementById(`${prefix}-pdf-group`);
+      if (videoGroup) videoGroup.style.display = type === 'video' ? 'block' : 'none';
+      if (pdfGroup) pdfGroup.style.display = type === 'pdf' ? 'block' : 'none';
+      if (document.getElementById('content-viewer')) previewSelectedMainContent(isNew);
+      if (document.getElementById('creator-new-preview')) previewSelectedMainContent(true);
+    }
+
+    function previewSelectedMainContent(isNew = false) {
+      contentRenderToken += 1;
+      const prefix = isNew ? 'creator-new' : 'creator';
+      const typeName = isNew ? 'creator-new-type' : 'creator-content-type';
+      const viewerId = isNew ? 'creator-new-preview' : 'content-viewer';
+      const viewer = document.getElementById(viewerId);
+      if (!viewer) return;
+
+      const type = document.querySelector(`input[name="${typeName}"]:checked`)?.value || 'video';
+      const video = document.getElementById(`${prefix}-video`)?.files?.[0];
+      const pdf = document.getElementById(`${prefix}-pdf`)?.files?.[0];
+      if (type === 'video' && video) {
+        releasePdfUrl();
+        releaseVideoUrl();
+        activeVideoUrl = URL.createObjectURL(video);
+        viewer.innerHTML = `<video controls preload="metadata" src="${activeVideoUrl}">Your browser cannot play this video.</video>`;
+        return;
+      }
+      if (type === 'pdf' && pdf) {
+        releasePdfUrl();
+        releaseVideoUrl();
+        activePdfUrl = URL.createObjectURL(pdf);
+        viewer.innerHTML = `<iframe src="${activePdfUrl}" title="PDF preview"></iframe>`;
+        return;
+      }
+
+      if (!isNew) {
+        const chapter = chapters[currentChapter];
+        if (chapter) renderMainContent(chapter);
+        return;
+      }
+
+      viewer.innerHTML = `
+        <div class="viewer-empty">
+          <strong>Choose a ${type === 'pdf' ? 'PDF' : 'video'} to preview</strong>
+        </div>
+      `;
+    }
+
+    async function renderMainContent(chapter) {
+      const viewer = document.getElementById('content-viewer');
+      if (!viewer || !chapter) return;
+      const renderToken = contentRenderToken + 1;
+      contentRenderToken = renderToken;
+      const isCurrentRender = () =>
+        renderToken === contentRenderToken &&
+        document.getElementById('content-viewer') === viewer &&
+        chapters[currentChapter]?.id === chapter.id;
+
+      if (chapter.main_content_type === 'pdf') {
+        try {
+          const response = await fetch(
+            `${API_URL}/courses/${courseId}/chapters/${chapter.id}/pdf`,
+            { cache: 'no-store', headers: { Authorization: `Bearer ${getToken()}` } }
+          );
+          if (!response.ok) {
+            const data = await response.json().catch(() => ({}));
+            throw new Error(data.message || 'Could not load PDF.');
+          }
+          const pdfUrl = URL.createObjectURL(await response.blob());
+          if (!isCurrentRender()) {
+            URL.revokeObjectURL(pdfUrl);
+            return;
+          }
+          releasePdfUrl();
+          releaseVideoUrl();
+          activePdfUrl = pdfUrl;
+          viewer.innerHTML = `<iframe src="${activePdfUrl}" title="${escapeAttribute(chapter.title)}"></iframe>`;
+        } catch (error) {
+          if (!isCurrentRender()) return;
+          viewer.innerHTML = `<div class="viewer-empty"><strong>PDF unavailable</strong>${escapeHtml(error.message)}</div>`;
+        }
+        return;
+      }
+
+      if (chapter.main_content_type !== 'video' || !chapter.video_url) {
+        if (!isCurrentRender()) return;
+        releasePdfUrl();
+        releaseVideoUrl();
+        viewer.innerHTML = `
+          <div class="viewer-empty">
+            <strong>Main content unavailable</strong>
+            Ask the tutor to add a video or PDF for this chapter.
+          </div>
+        `;
+        return;
+      }
+
+      try {
+        const response = await fetch(
+          `${API_URL}/courses/${courseId}/chapters/${chapter.id}/video`,
+          { cache: 'no-store', headers: { Authorization: `Bearer ${getToken()}` } }
+        );
+        if (!response.ok) {
+          const data = await response.json().catch(() => ({}));
+          throw new Error(data.message || 'Could not load video.');
+        }
+        const videoUrl = URL.createObjectURL(await response.blob());
+        if (!isCurrentRender()) {
+          URL.revokeObjectURL(videoUrl);
+          return;
+        }
+        releasePdfUrl();
+        releaseVideoUrl();
+        activeVideoUrl = videoUrl;
+        viewer.innerHTML = `<video controls controlsList="nodownload" preload="metadata" src="${activeVideoUrl}">Your browser cannot play this video.</video>`;
+        const video = viewer.querySelector('video');
+        video.addEventListener('loadedmetadata', () => updateCurrentVideoPlayback(video));
+        video.addEventListener('timeupdate', () => updateCurrentVideoPlayback(video));
+        video.addEventListener('seeking', () => updateCurrentVideoPlayback(video));
+        video.addEventListener('ended', () => {
+          currentVideoEnded = true;
+          currentVideoProgressRatio = 1;
+          syncStudentProgressUi();
+          updateNextButtonState();
+        });
+      } catch (error) {
+        if (!isCurrentRender()) return;
+        viewer.innerHTML = `<div class="viewer-empty"><strong>Video unavailable</strong>${escapeHtml(error.message)}</div>`;
+      }
+    }
+
+    async function saveLastOpened(chapterId) {
+      try {
+        const response = await fetch(`${API_URL}/courses/${courseId}/progress/access`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${getToken()}`
+          },
+          body: JSON.stringify({ chapterId })
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message || 'Could not save checkpoint.');
+        progressState.lastChapterId = chapterId;
+        progressState.progressPercent = Number(data.progressPercent ?? progressState.progressPercent);
+        renderProgressSummary();
+      } catch (error) {
+        console.warn(error.message);
+      }
+    }
+
+    function recordActiveChapterClosed(keepalive = false) {
+      if (viewerRole !== 'student' || studentPreviewMode) return;
+      recordChapterClosed(chapters[currentChapter]?.id, keepalive);
+    }
+
+    function recordChapterClosed(chapterId, keepalive = false) {
+      if (!Number.isInteger(Number(chapterId)) || lastClosedChapterId === Number(chapterId)) return;
+      lastClosedChapterId = Number(chapterId);
+      fetch(`${API_URL}/courses/${courseId}/progress/close`, {
+        method: 'POST',
+        keepalive,
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${getToken()}`
+        },
+        body: JSON.stringify({ chapterId: Number(chapterId) })
+      }).catch(() => {});
+    }
+
+    function updateNextButtonState() {
+      const button = document.getElementById('next-lecture-btn');
+      const chapter = chapters[currentChapter];
+      if (!button || !chapter || viewerRole !== 'student') return;
+      const needsVideoEnd = chapter.main_content_type === 'video' && !isChapterCompleted(chapter.id);
+      button.disabled = needsVideoEnd && !currentVideoEnded;
+      const nextLabel = currentChapter === chapters.length - 1 ? 'Finish Course' : 'Next Lecture';
+      button.setAttribute('aria-label', nextLabel);
+    }
+
+    function switchLessonTab(tabName) {
+      const tabs = document.querySelectorAll('.lesson-tab');
+      const panels = document.querySelectorAll('.tab-panel');
+      tabs.forEach(tab => {
+        tab.classList.toggle('active', tab.dataset.tab === tabName);
+      });
+      panels.forEach(panel => {
+        const isSelected = panel.id === `tab-${tabName}`;
+        panel.classList.toggle('active', isSelected);
+        if (panel.id === 'tab-completed') {
+          panel.hidden = !isSelected;
+        }
+      });
+    }
+
+    async function completeAndContinue(index) {
+      const chapter = chapters[index];
+      if (!chapter) return;
+      if (viewerRole !== 'student') {
+        selectChapter(index + 1);
+        return;
+      }
+      if (chapter.main_content_type === 'video' && !isChapterCompleted(chapter.id) && !currentVideoEnded) {
+        showToast('Please watch the full video before marking this lecture complete.', 'error');
+        return;
+      }
+
+      const button = document.getElementById('next-lecture-btn');
+      button.disabled = true;
+      if (button) {
+        button.setAttribute('aria-busy', 'true');
+        button.classList.add('loading');
+      }
+      try {
+        const response = await fetch(`${API_URL}/courses/${courseId}/progress/complete`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${getToken()}`
+          },
+          body: JSON.stringify({ chapterId: chapter.id })
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message || 'Could not update progress.');
+
+        progressState.completedChapterIds.add(Number(chapter.id));
+        progressState.progressPercent = Number(data.progressPercent ?? progressState.progressPercent);
+        progressState.lastChapterId = data.lastChapterId || chapter.id;
+        currentVideoProgressRatio = 1;
+        if (progressState.progressPercent >= 100) progressState.completedAt = new Date().toISOString();
+        renderSidebar();
+        syncStudentProgressUi();
+        showToast(data.message || 'Progress updated.', 'success');
+        if (index < chapters.length - 1) selectChapter(index + 1);
+        else selectChapter(index);
+      } catch (error) {
+        showToast(error.message, 'error');
+        updateNextButtonState();
+      } finally {
+        if (button) {
+          button.removeAttribute('aria-busy');
+          button.classList.remove('loading');
+        }
+      }
+    }
+
+    async function generateCertificate(event) {
+      event?.preventDefault();
+      event?.stopPropagation();
+      if (!canGenerateCertificate()) return false;
+      const button = document.getElementById('generate-certificate-btn');
+      if (button) {
+        button.disabled = true;
+        button.textContent = 'Generating...';
+      }
+      try {
+        const response = await fetch(`${API_URL}/courses/${courseId}/certificate`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${getToken()}` }
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message || 'Could not generate certificate.');
+
+        const download = await fetch(`${API_URL}/courses/${courseId}/certificate?t=${Date.now()}`, {
+          headers: { Authorization: `Bearer ${getToken()}` }
+        });
+        if (!download.ok) {
+          const errorData = await download.json().catch(() => ({}));
+          throw new Error(errorData.message || 'Certificate generated, but download failed.');
+        }
+        const certificateBlob = await download.blob();
+        if (!certificateBlob.size || !/pdf/i.test(certificateBlob.type || 'application/pdf')) {
+          throw new Error('Certificate download did not return a valid PDF.');
+        }
+        const certificateUrl = URL.createObjectURL(certificateBlob);
+        openCertificatePreview(certificateUrl);
+        downloadCertificateBlob(certificateUrl);
+        showToast(data.message || 'Certificate PDF downloaded.', 'success');
+      } catch (error) {
+        showToast(error.message, 'error');
+      } finally {
+        if (button) {
+          button.disabled = !canGenerateCertificate();
+          button.textContent = 'Generate Certificate';
+        }
+      }
+      return false;
+    }
+
+    function downloadCertificateBlob(url) {
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `E-Learning-certificate-${courseId}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    }
+
+    function openCertificatePreview(url) {
+      if (activeCertificateUrl) URL.revokeObjectURL(activeCertificateUrl);
+      activeCertificateUrl = url;
+      document.getElementById('certificate-preview-frame').src = url;
+      const modal = document.getElementById('certificate-modal');
+      modal.classList.add('show');
+      modal.setAttribute('aria-hidden', 'false');
+    }
+
+    function downloadCertificatePreview() {
+      if (!activeCertificateUrl) return;
+      downloadCertificateBlob(activeCertificateUrl);
+    }
+
+    function closeCertificatePreview() {
+      const modal = document.getElementById('certificate-modal');
+      modal.classList.remove('show');
+      modal.setAttribute('aria-hidden', 'true');
+      document.getElementById('certificate-preview-frame').src = '';
+      if (activeCertificateUrl) URL.revokeObjectURL(activeCertificateUrl);
+      activeCertificateUrl = null;
+    }
+
+    function releaseVideoUrl() {
+      if (!activeVideoUrl) return;
+      URL.revokeObjectURL(activeVideoUrl);
+      activeVideoUrl = null;
+    }
+
+    function renderResources(chapter) {
+      const container = document.getElementById('chapter-resources');
+      const resources = Array.isArray(chapter.resources) ? chapter.resources : [];
+      if (!resources.length) {
+        container.innerHTML = '<span class="resource-note">No additional references have been added for this chapter.</span>';
+        return;
+      }
+      container.innerHTML = `<div class="resources-grid">${resources.map(resource => `
+        <button class="resource-item" onclick="openChapterResource(${resource.id},'${resource.resource_type}','${encodeURIComponent(resource.external_url || '')}')">
+          <span>
+            <span style="display:block;font-weight:700;">${escapeHtml(resource.title)}</span>
+            <span class="resource-kind">${escapeHtml(resource.resource_type)}</span>
+          </span>
+        </button>
+      `).join('')}</div>`;
+    }
+
+    function toggleTutorEditor(panel) {
+      if (!tutorEditMode) return;
+      activeTutorPanel = activeTutorPanel === panel ? '' : panel;
+      renderTutorEditor(activeTutorPanel);
+    }
+
+    function openCourseDetailsEditor() {
+      if (!tutorEditMode) {
+        tutorEditMode = true;
+        configureRoleControls();
+        renderSidebar();
+      }
+      activeTutorPanel = 'course';
+      renderTutorEditor(activeTutorPanel);
+      document.getElementById('tutor-editor')?.scrollIntoView({ behavior:'smooth', block:'start' });
+    }
+
+    function toggleEditMode() {
+      tutorEditMode = !tutorEditMode;
+      if (!tutorEditMode) {
+        activeTutorPanel = '';
+        renderTutorEditor('');
+      }
+      configureRoleControls();
+      renderSidebar();
+      if (chapters.length) selectChapter(currentChapter);
+    }
+
+    function openNewSectionEditor() {
+      activeTutorPanel = '';
+      renderTutorEditor('');
+      document.getElementById('chapter-title').textContent = 'Add Section';
+      document.getElementById('chapter-progress').textContent = '';
+      document.getElementById('lesson-wrap').innerHTML = `
+        <section class="creator-card">
+          <h2>Add New Section</h2>
+          <div class="form-group">
+            <label>Section Name</label>
+            <input id="creator-new-section" placeholder="e.g. Getting Started" />
+          </div>
+          <div class="editor-actions">
+            <button class="btn btn-primary" type="button" onclick="addCreatorSection(event)">Add Section</button>
+          </div>
+        </section>
+      `;
+    }
+
+    function openSectionEditor(sectionId) {
+      const section = sections.find(item => item.id === sectionId);
+      if (!section) return;
+      activeTutorPanel = '';
+      renderTutorEditor('');
+      document.getElementById('chapter-title').textContent = section.title;
+      document.getElementById('chapter-progress').textContent = 'Section settings';
+      document.getElementById('lesson-wrap').innerHTML = `
+        <section class="creator-card">
+          <h2>Edit Section</h2>
+          <div class="form-group">
+            <label>Section Name</label>
+            <input id="creator-section-title" value="${escapeAttribute(section.title)}" />
+          </div>
+          <div class="editor-actions">
+            <button class="btn btn-primary" type="button" onclick="saveCreatorSection(${section.id})">Save Section</button>
+            <button class="btn btn-outline deny-button" type="button" onclick="deleteSectionInline(${section.id})">Delete Section</button>
+          </div>
+        </section>
+      `;
+    }
+
+    function openNewChapterEditor(sectionId) {
+      const section = sections.find(item => item.id === sectionId);
+      if (!section) return;
+      activeTutorPanel = '';
+      renderTutorEditor('');
+      document.getElementById('chapter-title').textContent = 'Add Chapter';
+      document.getElementById('chapter-progress').textContent = section.title;
+      document.getElementById('lesson-wrap').innerHTML = `
+        <section class="creator-card">
+          <h2>Add Chapter to ${escapeHtml(section.title)}</h2>
+          <div class="editor-grid">
+            <div class="form-group full">
+              <label>Chapter Title</label>
+              <input id="creator-new-title" placeholder="Chapter title" />
+            </div>
+          </div>
+        </section>
+        <section class="creator-card">
+          <h3>Main Content</h3>
+          <div class="content-choice">
+            <label><input type="radio" name="creator-new-type" value="video" onchange="toggleCreatorContentInputs(true)" checked /> Video</label>
+            <label><input type="radio" name="creator-new-type" value="pdf" onchange="toggleCreatorContentInputs(true)" /> PDF</label>
+          </div>
+          <div class="editor-grid">
+            <div class="form-group" id="creator-new-video-group"><label>Main Video</label><input type="file" id="creator-new-video" accept="video/*" onchange="previewSelectedMainContent(true)" /></div>
+            <div class="form-group" id="creator-new-pdf-group"><label>Main PDF</label><input type="file" id="creator-new-pdf" accept=".pdf,application/pdf" onchange="previewSelectedMainContent(true)" /></div>
+          </div>
+          <div class="viewer" id="creator-new-preview" style="margin-top:18px;">
+            <div class="viewer-empty"><strong>Choose a video to preview</strong></div>
+          </div>
+        </section>
+        <section class="creator-card">
+          <h3>References / Resources</h3>
+          <div class="editor-grid">
+            <div class="form-group"><label>Reference PDFs</label><input type="file" id="creator-new-resource-pdfs" accept=".pdf,application/pdf" multiple /></div>
+            <div class="form-group"><label>Reference Images</label><input type="file" id="creator-new-resource-images" accept="image/*" multiple /></div>
+            <div class="form-group full"><label>External Links</label><textarea id="creator-new-resource-links" placeholder="Title | https://example.com"></textarea></div>
+          </div>
+        </section>
+        <button class="btn btn-primary" id="creator-new-save" type="button" onclick="saveCreatorNewChapter(event, ${section.id})">Add Chapter</button>
+      `;
+      toggleCreatorContentInputs(true);
+    }
+
+    async function addCreatorSection(event) {
+      const title = document.getElementById('creator-new-section').value.trim();
+      if (!title) return showToast('Section name is required.', 'error');
+      const button = event?.currentTarget || document.querySelector('button[onclick="addCreatorSection()"]');
+      if (button) {
+        button.disabled = true;
+        button.textContent = 'Saving...';
+      }
+      const data = await tutorMutation(`${API_URL}/chapters/sections`, {
+        method:'POST',
+        headers:{ 'Content-Type':'application/json' },
+        body:JSON.stringify({ courseId, title })
+      }, 'Section added.', saved => ({ openAddChapterForSectionId: saved.sectionId }));
+      if (!data && button) {
+        button.disabled = false;
+        button.textContent = 'Add Section';
+      }
+    }
+
+    async function saveCreatorSection(sectionId) {
+      const title = document.getElementById('creator-section-title').value.trim();
+      if (!title) return showToast('Section name is required.', 'error');
+      await tutorMutation(`${API_URL}/chapters/sections/${sectionId}`, {
+        method:'PUT',
+        headers:{ 'Content-Type':'application/json' },
+        body:JSON.stringify({ courseId, title })
+      }, 'Section updated.');
+    }
+
+    async function saveCreatorChapter(event, chapterId) {
+      const chapter = chapters.find(item => item.id === chapterId);
+      const title = document.getElementById('creator-title').value.trim();
+      const selectedType = document.querySelector('input[name="creator-content-type"]:checked')?.value;
+      const video = document.getElementById('creator-video').files[0];
+      const pdf = document.getElementById('creator-pdf').files[0];
+      if (!chapter || !title || !['video', 'pdf'].includes(selectedType)) {
+        return showToast('Chapter title and main content type are required.', 'error');
+      }
+
+      if (selectedType !== chapter.main_content_type) {
+        const replacement = selectedType === 'video' ? video : pdf;
+        if (!replacement) return showToast(`Upload the new ${selectedType.toUpperCase()} first.`, 'error');
+        const oldLabel = chapter.main_content_type === 'pdf' ? 'PDF' : 'video';
+        if (!confirm(`Remove existing ${oldLabel} and upload ${selectedType === 'pdf' ? 'PDF' : 'video'}?`)) return;
+      } else if (selectedType === 'video' && video && chapter.video_url && !confirm('Replace existing video?')) {
+        return;
+      } else if (selectedType === 'pdf' && pdf && chapter.pdf_path && !confirm('Replace existing PDF?')) {
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('courseId', courseId);
+      formData.append('sectionId', chapter.section_id);
+      formData.append('title', title);
+      formData.append('mainContentType', selectedType);
+      if (selectedType === 'video' && video) formData.append('mainVideo', video);
+      if (selectedType === 'pdf' && pdf) formData.append('mainPdf', pdf);
+      appendFiles(formData, 'resourcePdfs', document.getElementById('creator-resource-pdfs').files);
+      appendFiles(formData, 'resourceImages', document.getElementById('creator-resource-images').files);
+      formData.append('resourceLinks', JSON.stringify(parseResourceLinks(document.getElementById('creator-resource-links').value)));
+      const button = event?.currentTarget || document.querySelector(`button[onclick="saveCreatorChapter(${chapterId})"]`);
+      if (button) {
+        button.disabled = true;
+        button.textContent = 'Saving...';
+      }
+      const data = await tutorMutation(
+        `${API_URL}/chapters/${chapterId}`,
+        { method:'PUT', body:formData },
+        'Chapter updated.',
+        saved => ({ selectedChapterId: saved.chapter?.id || chapterId })
+      );
+      if (!data && button) {
+        button.disabled = false;
+        button.textContent = 'Save Changes';
+      }
+    }
+
+    async function saveCreatorNewChapter(event, sectionId) {
+      const section = sections.find(item => item.id === sectionId);
+      const title = document.getElementById('creator-new-title').value.trim();
+      const selectedType = document.querySelector('input[name="creator-new-type"]:checked')?.value;
+      const video = document.getElementById('creator-new-video').files[0];
+      const pdf = document.getElementById('creator-new-pdf').files[0];
+      if (!section || !title) return showToast('Chapter title is required.', 'error');
+      if (selectedType === 'video' && !video) return showToast('Upload the main video.', 'error');
+      if (selectedType === 'pdf' && !pdf) return showToast('Upload the main PDF.', 'error');
+
+      const formData = new FormData();
+      formData.append('courseId', courseId);
+      formData.append('sectionId', sectionId);
+      formData.append('title', title);
+      formData.append('mainContentType', selectedType);
+      formData.append('chapterOrder', section.lectures.length + 1);
+      if (selectedType === 'video' && video) formData.append('mainVideo', video);
+      if (selectedType === 'pdf' && pdf) formData.append('mainPdf', pdf);
+      appendFiles(formData, 'resourcePdfs', document.getElementById('creator-new-resource-pdfs').files);
+      appendFiles(formData, 'resourceImages', document.getElementById('creator-new-resource-images').files);
+      formData.append('resourceLinks', JSON.stringify(parseResourceLinks(document.getElementById('creator-new-resource-links').value)));
+      const button = document.getElementById('creator-new-save');
+      if (button) {
+        button.disabled = true;
+        button.textContent = 'Saving...';
+      }
+      const data = await tutorMutation(
+        `${API_URL}/chapters/add`,
+        { method:'POST', body:formData },
+        'Chapter added.',
+        saved => ({ selectedChapterId: saved.chapter?.id || saved.chapterId })
+      );
+      if (!data && button) {
+        button.disabled = false;
+        button.textContent = 'Add Chapter';
+      }
+    }
+
+    function startSectionDrag(event, sectionId) {
+      if (draggedChapterId) return;
+      draggedSectionId = sectionId;
+      event.currentTarget.classList.add('dragging');
+      event.dataTransfer.effectAllowed = 'move';
+    }
+
+    function allowSectionDrop(event, sectionId) {
+      if (draggedSectionId && !draggedChapterId) {
+        event.preventDefault();
+        event.currentTarget.classList.add('drag-over');
+        return;
+      }
+      if (draggedChapterId && draggedChapterSectionId !== null) {
+        event.preventDefault();
+        event.currentTarget.classList.add('drag-over');
+      }
+    }
+
+    async function dropSection(event, targetSectionId) {
+      event.preventDefault();
+      if (draggedChapterId) {
+        const sourceChapterId = draggedChapterId;
+        clearDragState();
+        return saveChapterLayout(sourceChapterId, targetSectionId, null);
+      }
+      if (!draggedSectionId || draggedSectionId === targetSectionId) return;
+      const sourceIndex = sections.findIndex(item => item.id === draggedSectionId);
+      const targetIndex = sections.findIndex(item => item.id === targetSectionId);
+      const reordered = [...sections];
+      const [moved] = reordered.splice(sourceIndex, 1);
+      reordered.splice(targetIndex, 0, moved);
+      clearDragState();
+      await tutorMutation(`${API_URL}/chapters/sections/reorder`, {
+        method:'POST',
+        headers:{ 'Content-Type':'application/json' },
+        body:JSON.stringify({ courseId, sectionIds:reordered.map(item => item.id) })
+      }, 'Sections reordered.');
+    }
+
+    function startChapterDrag(event, chapterId, sectionId) {
+      event.stopPropagation();
+      draggedChapterId = chapterId;
+      draggedChapterSectionId = sectionId;
+      event.currentTarget.classList.add('dragging');
+      event.dataTransfer.effectAllowed = 'move';
+    }
+
+    function allowChapterDrop(event, sectionId) {
+      if (!draggedChapterId) return;
+      event.preventDefault();
+      event.stopPropagation();
+      event.currentTarget.classList.add('drag-over');
+    }
+
+    async function dropChapter(event, targetChapterId, sectionId) {
+      event.preventDefault();
+      event.stopPropagation();
+      if (!draggedChapterId || draggedChapterId === targetChapterId) return;
+      const sourceChapterId = draggedChapterId;
+      clearDragState();
+      await saveChapterLayout(sourceChapterId, sectionId, targetChapterId);
+    }
+
+    async function saveChapterLayout(chapterId, targetSectionId, targetChapterId) {
+      const layout = sections.map(section => ({
+        sectionId: section.id,
+        chapterIds: section.lectures.map(chapter => chapter.id)
+      }));
+      layout.forEach(section => {
+        section.chapterIds = section.chapterIds.filter(id => id !== chapterId);
+      });
+      const target = layout.find(section => section.sectionId === targetSectionId);
+      if (!target) return;
+      const targetIndex = targetChapterId ? target.chapterIds.indexOf(targetChapterId) : target.chapterIds.length;
+      target.chapterIds.splice(targetIndex < 0 ? target.chapterIds.length : targetIndex, 0, chapterId);
+      await tutorMutation(`${API_URL}/chapters/reorder-all`, {
+        method:'POST',
+        headers:{ 'Content-Type':'application/json' },
+        body:JSON.stringify({ courseId, sections:layout })
+      }, 'Chapter moved.');
+    }
+
+    function clearDragOver(event) {
+      event.currentTarget.classList.remove('drag-over');
+    }
+
+    function clearDragState() {
+      draggedSectionId = null;
+      draggedChapterId = null;
+      draggedChapterSectionId = null;
+      document.querySelectorAll('.dragging,.drag-over').forEach(element => element.classList.remove('dragging', 'drag-over'));
+    }
+
+    function renderTutorEditor(panel) {
+      const container = document.getElementById('tutor-editor');
+      if (!panel) {
+        container.classList.remove('show');
+        container.innerHTML = '';
+        return;
+      }
+      container.classList.add('show');
+      if (panel === 'course') {
+        container.innerHTML = `
+          <section class="editor-card">
+            <div class="editor-head">
+              <h2>Edit Course Details</h2>
+              <button class="btn btn-outline" onclick="toggleTutorEditor('course')">Close</button>
+            </div>
+            <div class="editor-grid">
+              <div class="form-group">
+                <label>Course Title</label>
+                <input id="inline-course-title" value="${escapeAttribute(course.title)}" />
+              </div>
+              <div class="form-group">
+                <label>Replace Thumbnail</label>
+                <input type="file" id="inline-course-image" accept="image/jpeg,image/png,image/webp,image/gif" />
+              </div>
+              <div class="form-group full">
+                <label>Description</label>
+                ${richTextToolbar('inline-course-description')}
+                <div id="inline-course-description" class="html-editor" contenteditable="true">${sanitizeCourseDescriptionHtml(course.description)}</div>
+              </div>
+            </div>
+            <div class="editor-actions">
+              <button class="btn btn-primary" onclick="saveCourseInline()">Save Course</button>
+            </div>
+          </section>
+        `;
+        return;
+      }
+      container.classList.remove('show');
+      container.innerHTML = '';
+    }
+
+    async function saveCourseInline() {
+      const title = document.getElementById('inline-course-title').value.trim();
+      if (!title) return showToast('Course title is required.', 'error');
+      const formData = new FormData();
+      formData.append('title', title);
+      formData.append('description', document.getElementById('inline-course-description').innerHTML.trim());
+      const image = document.getElementById('inline-course-image').files[0];
+      if (image) formData.append('image', image);
+      await tutorMutation(`${API_URL}/courses/${courseId}`, { method:'PUT', body:formData }, 'Course updated.');
+    }
+
+    async function deleteSectionInline(sectionId) {
+      const section = sections.find(item => item.id === sectionId);
+      const chapterCount = section?.lectures.length || 0;
+      const warning = chapterCount
+        ? `Delete "${section.title}" and its ${chapterCount} chapter${chapterCount === 1 ? '' : 's'}? Uploaded files will also be deleted.`
+        : `Delete "${section?.title || 'this section'}"?`;
+      if (!confirm(warning)) return;
+      await tutorMutation(`${API_URL}/chapters/sections/${sectionId}`, {
+        method:'DELETE',
+        headers:{ 'Content-Type':'application/json' },
+        body:JSON.stringify({ courseId })
+      }, 'Section deleted.');
+    }
+
+    async function deleteChapterInline(chapterId) {
+      if (!confirm('Delete this chapter and its uploaded files?')) return;
+      await tutorMutation(`${API_URL}/chapters/${chapterId}`, { method:'DELETE' }, 'Chapter deleted.');
+    }
+
+    async function deleteResourceInline(resourceId) {
+      if (!confirm('Delete this reference/resource?')) return;
+      await tutorMutation(`${API_URL}/chapters/${courseId}/resources/${resourceId}`, { method:'DELETE' }, 'Resource deleted.');
+    }
+
+    async function editResourceInline(resourceId, type, encodedTitle, encodedUrl) {
+      const title = prompt('Resource title', decodeURIComponent(encodedTitle))?.trim();
+      if (!title) return;
+      let externalUrl = decodeURIComponent(encodedUrl);
+      if (type === 'link') {
+        externalUrl = prompt('External link URL', externalUrl)?.trim() || '';
+        if (!/^https?:\/\//i.test(externalUrl)) return showToast('Enter a valid HTTP or HTTPS URL.', 'error');
+      }
+      await tutorMutation(`${API_URL}/chapters/${courseId}/resources/${resourceId}`, {
+        method:'PUT',
+        headers:{ 'Content-Type':'application/json' },
+        body:JSON.stringify({ courseId, title, externalUrl })
+      }, 'Resource updated.');
+    }
+
+    async function tutorMutation(url, options, successMessage, reloadOptions = {}) {
+      try {
+        const headers = { ...(options.headers || {}), Authorization:`Bearer ${getToken()}` };
+        const response = await fetch(url, { ...options, headers });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          if (response.status === 409 && data.sectionId) {
+            showToast('That section already exists. Opening it now.', 'success');
+            await loadCourse({ openAddChapterForSectionId: data.sectionId });
+            return data;
+          }
+          showToast(data.message || 'Could not save changes.', 'error');
+          return null;
+        }
+        showToast(data.status === 'draft'
+          ? `${successMessage} Submit the course when it is ready for review.`
+          : successMessage, 'success');
+        const nextReloadOptions = typeof reloadOptions === 'function' ? reloadOptions(data) : reloadOptions;
+        await loadCourse(nextReloadOptions || {});
+        return data;
+      } catch (error) {
+        showToast(error.message || 'Could not save changes.', 'error');
+        return null;
+      }
+    }
+
+    async function submitCourseForReview() {
+      if (!confirm('Submit this course to the admin for review?')) return;
+      const response = await fetch(`${API_URL}/courses/submit`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${getToken()}`
+        },
+        body: JSON.stringify({ courseId })
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        showToast(data.message || 'Could not submit the course.', 'error');
+        return;
+      }
+      queueToast(data.message || 'Course submitted for review successfully.', 'success');
+      window.location.href = 'tutor-dashboard.html';
+    }
+
+    async function deleteTutorCourse() {
+      const confirmed = confirm(course?.status === 'published'
+        ? 'Request deletion for this published course? It will be unpublished now and removed only after admin approval.'
+        : 'Permanently delete this course and all of its content? This cannot be undone.'
+      );
+      if (!confirmed) return;
+
+      const response = await fetch(`${API_URL}/courses/${courseId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${getToken()}` }
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        showToast(data.message || 'Could not delete course.', 'error');
+        return;
+      }
+      showToast(data.message || 'Course deleted permanently.', 'success');
+      if (data.status === 'delete_requested') {
+        await loadCourse();
+      } else {
+        window.location.href = 'tutor-courses.html';
+      }
+    }
+
+    function appendFiles(formData, fieldName, files) {
+      [...files].forEach(file => formData.append(fieldName, file));
+    }
+
+    function parseResourceLinks(value) {
+      return value.split(/\r?\n/).map(line => {
+        const separator = line.indexOf('|');
+        if (separator === -1) return { title:'External resource', url:line.trim() };
+        return { title:line.slice(0, separator).trim(), url:line.slice(separator + 1).trim() };
+      }).filter(link => /^https?:\/\//i.test(link.url));
+    }
+
+    async function openChapterResource(resourceId, type, externalUrl) {
+      if (type === 'link') {
+        window.open(decodeURIComponent(externalUrl), '_blank', 'noopener');
+        return;
+      }
+      try {
+        const response = await fetch(`${API_URL}/courses/${courseId}/resources/${resourceId}`, {
+          headers:{ Authorization:`Bearer ${getToken()}` }
+        });
+        if (!response.ok) {
+          const data = await response.json().catch(() => ({}));
+          throw new Error(data.message || 'Could not open resource.');
+        }
+        const url = URL.createObjectURL(await response.blob());
+        activeResourceUrls.push(url);
+        window.open(url, '_blank', 'noopener');
+      } catch (error) {
+        showToast(error.message, 'error');
+      }
+    }
+
+    function releaseResourceUrls() {
+      activeResourceUrls.splice(0).forEach(url => URL.revokeObjectURL(url));
+    }
+
+    async function loadDiscussion(chapterId) {
+      const list = document.getElementById('discussion-list');
+      if (!list) return;
+
+      try {
+        const response = await fetch(
+          `${API_URL}/discussions/${courseId}/chapters/${chapterId}`,
+          { headers: { Authorization: `Bearer ${getToken()}` } }
+        );
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message || 'Could not load discussion.');
+        if (chapters[currentChapter]?.id !== chapterId) return;
+
+        renderDiscussion(Array.isArray(data) ? data : []);
+      } catch (error) {
+        if (chapters[currentChapter]?.id !== chapterId) return;
+        list.innerHTML = `<div class="discussion-empty">${escapeHtml(error.message)}</div>`;
+      }
+    }
+
+    function renderDiscussion(doubts) {
+      const list = document.getElementById('discussion-list');
+      if (!list) return;
+      window.currentDoubts = doubts;
+      if (!doubts.length) {
+        list.innerHTML = '<div class="discussion-empty">No questions yet. Start the discussion.</div>';
+        return;
+      }
+
+      list.innerHTML = doubts.map(doubt => `
+        <article class="doubt-item">
+          <div class="doubt-meta">
+            ${escapeHtml(doubt.student_name)} asked ${escapeHtml(formatDate(doubt.created_at))}
+          </div>
+          <div class="doubt-question">${escapeHtml(doubt.question)}</div>
+          <div class="doubt-actions">
+            ${viewerRole !== 'admin' ? `<button class="text-action" type="button" onclick="toggleReplyForm(${doubt.id})">Reply</button>` : ''}
+            ${viewerRole === 'student' && course.tutor_email ? `
+              <button class="text-action mail-action" type="button" onclick="mailTutor(${doubt.id})">
+                Mail Tutor
+              </button>
+            ` : ''}
+            <span class="doubt-meta">${doubt.replies.length} repl${doubt.replies.length === 1 ? 'y' : 'ies'}</span>
+          </div>
+          <div class="replies">
+            ${doubt.replies.map(reply => `
+              <div class="reply-item">
+                <div class="reply-meta">${escapeHtml(reply.student_name)} replied ${escapeHtml(formatDate(reply.created_at))}</div>
+                <div class="reply-text">${escapeHtml(reply.reply)}</div>
+              </div>
+            `).join('')}
+          </div>
+          ${viewerRole !== 'admin' ? `<form class="reply-form" id="reply-form-${doubt.id}" onsubmit="postReply(event, ${doubt.id})">
+            <textarea maxlength="2000" placeholder="Write a helpful reply..." required></textarea>
+            <div class="reply-form-actions">
+              <button class="btn btn-outline" type="button" onclick="toggleReplyForm(${doubt.id})">Cancel</button>
+              <button class="btn btn-primary" type="submit">Post Reply</button>
+            </div>
+          </form>` : ''}
+        </article>
+      `).join('');
+
+    }
+
+    async function postQuestion(event, chapterId) {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const input = form.querySelector('textarea');
+      const button = form.querySelector('button[type="submit"]');
+      const question = input.value.trim();
+      if (!question) return;
+
+      button.disabled = true;
+      button.textContent = 'Posting...';
+      try {
+        const response = await fetch(`${API_URL}/discussions/${courseId}/chapters/${chapterId}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${getToken()}`
+          },
+          body: JSON.stringify({ question })
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message || 'Could not post question.');
+
+        input.value = '';
+        showToast('Question posted.', 'success');
+        await loadDiscussion(chapterId);
+      } catch (error) {
+        showToast(error.message, 'error');
+      } finally {
+        button.disabled = false;
+        button.textContent = 'Post Question';
+      }
+    }
+
+    async function sendTutorFeedback(event, chapterId) {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const input = form.querySelector('textarea');
+      const button = form.querySelector('button[type="submit"]');
+      const feedback = input.value.trim();
+      if (!feedback) return;
+
+      button.disabled = true;
+      button.textContent = 'Sending...';
+      try {
+        const response = await fetch(`${API_URL}/discussions/${courseId}/feedback`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${getToken()}`
+          },
+          body: JSON.stringify({ chapterId, feedback })
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message || 'Could not send feedback.');
+
+        input.value = '';
+        showToast(data.message || 'Feedback sent to the tutor.', 'success');
+      } catch (error) {
+        showToast(error.message, 'error');
+      } finally {
+        button.disabled = false;
+        button.textContent = 'Send Feedback';
+      }
+    }
+
+    function toggleReplyForm(doubtId) {
+      document.getElementById(`reply-form-${doubtId}`)?.classList.toggle('show');
+    }
+
+    async function postReply(event, doubtId) {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const input = form.querySelector('textarea');
+      const button = form.querySelector('button[type="submit"]');
+      const reply = input.value.trim();
+      if (!reply) return;
+
+      button.disabled = true;
+      button.textContent = 'Posting...';
+      try {
+        const response = await fetch(`${API_URL}/discussions/${courseId}/doubts/${doubtId}/replies`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${getToken()}`
+          },
+          body: JSON.stringify({ reply })
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message || 'Could not post reply.');
+
+        showToast('Reply posted.', 'success');
+        await loadDiscussion(chapters[currentChapter].id);
+      } catch (error) {
+        showToast(error.message, 'error');
+        button.disabled = false;
+        button.textContent = 'Post Reply';
+      }
+    }
+
+    function mailTutor(doubtId) {
+      const doubt = (window.currentDoubts || []).find(item => item.id === doubtId);
+      if (!doubt || !course.tutor_email) {
+        showToast('Tutor email is not available.', 'error');
+        return;
+      }
+
+      const chapter = chapters[currentChapter];
+      const subject = `E-Learning doubt: ${course.title} - ${chapter.title}`;
+      const body = [
+        `Hello ${course.tutor_name || 'Tutor'},`,
+        '',
+        `I still need help with this question from "${chapter.title}":`,
+        '',
+        doubt.question,
+        '',
+        `Course: ${course.title}`,
+        '',
+        'Thank you.'
+      ].join('\n');
+      const gmailUrl =
+        `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(course.tutor_email)}` +
+        `&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+
+      window.open(gmailUrl, '_blank', 'noopener');
+    }
+
+    async function reviewCourse(status) {
+      let feedback = '';
+      if (course.status === 'delete_requested') {
+        if (status === 'approved') {
+          if (!confirm('Approve this deletion request and remove the course?')) return;
+        } else {
+          feedback = await requestReviewFeedback('Keep Published', 'Why are you denying this deletion request? This feedback will be emailed to the tutor.');
+          if (!feedback) return showToast('Admin feedback is required.', 'error');
+        }
+      } else if (status === 'approved') {
+        if (!confirm('Approve this course? It will not be visible to students until it is published.')) return;
+      } else if (status === 'published') {
+        if (!confirm('Publish this course and make it visible to students?')) return;
+      } else {
+        const prompts = {
+          unpublished: 'Why are you unpublishing this course? This feedback will be emailed to the tutor.',
+          changes_requested: 'What changes are needed? This feedback will be emailed to the tutor.',
+          rejected: 'Why is this course being rejected? This feedback will be emailed to the tutor.'
+        };
+        feedback = await requestReviewFeedback(statusLabel(status), prompts[status] || 'Add feedback for the tutor.');
+        if (!feedback) return showToast('Admin feedback is required.', 'error');
+      }
+
+      const response = await fetch(`${API_URL}/courses/review`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${getToken()}`
+        },
+        body: JSON.stringify({ courseId, status, feedback })
+      });
+      const data = await response.json();
+      if (!response.ok) return showToast(data.message || 'Could not review course.', 'error');
+
+      course.status = status;
+      configureRoleControls();
+      showToast(data.emailSent === false
+        ? `${data.message} Tutor email could not be sent.`
+        : data.message, data.emailSent === false ? 'error' : 'success');
+    }
+
+    function requestReviewFeedback(title, message) {
+      const modal = document.getElementById('review-feedback-modal');
+      const textarea = document.getElementById('review-feedback-text');
+      const submit = document.getElementById('review-feedback-submit');
+      const cancel = document.getElementById('review-feedback-cancel');
+      document.getElementById('review-feedback-title').textContent = title;
+      document.getElementById('review-feedback-message').textContent = message;
+      textarea.value = '';
+      modal.classList.add('show');
+      modal.setAttribute('aria-hidden', 'false');
+      setTimeout(() => textarea.focus(), 0);
+
+      return new Promise((resolve) => {
+        const close = (value) => {
+          modal.classList.remove('show');
+          modal.setAttribute('aria-hidden', 'true');
+          submit.removeEventListener('click', submitHandler);
+          cancel.removeEventListener('click', cancelHandler);
+          modal.removeEventListener('click', backdropHandler);
+          textarea.removeEventListener('keydown', keyHandler);
+          resolve(value);
+        };
+        const submitHandler = () => close(textarea.value.trim());
+        const cancelHandler = () => close('');
+        const backdropHandler = (event) => {
+          if (event.target === modal) close('');
+        };
+        const keyHandler = (event) => {
+          if (event.key === 'Escape') close('');
+          if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') submitHandler();
+        };
+        submit.addEventListener('click', submitHandler);
+        cancel.addEventListener('click', cancelHandler);
+        modal.addEventListener('click', backdropHandler);
+        textarea.addEventListener('keydown', keyHandler);
+      });
+    }
+
+    function formatDate(value) {
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return '';
+      return date.toLocaleString([], {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    }
+
+    function showState(message, includeBackLink = false) {
+      document.getElementById('lesson-wrap').innerHTML = `
+        <div class="state-message">
+          <p>${escapeHtml(message)}</p>
+          ${includeBackLink ? `<a class="btn btn-primary" href="${viewerRole}-dashboard.html" style="margin-top:18px;">Back to Dashboard</a>` : ''}
+        </div>
+      `;
+    }
+
+    function releasePdfUrl() {
+      if (activePdfUrl) URL.revokeObjectURL(activePdfUrl);
+      activePdfUrl = null;
+    }
+
+    function escapeHtml(value) {
+      const element = document.createElement('div');
+      element.textContent = String(value ?? '');
+      return element.innerHTML;
+    }
+
+    function escapeAttribute(value) {
+      return escapeHtml(value)
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;')
+        .replace(/`/g, '&#96;');
+    }
+
+    window.addEventListener('beforeunload', () => {
+      recordActiveChapterClosed(true);
+      releasePdfUrl();
+      releaseVideoUrl();
+      releaseResourceUrls();
+      if (activeCertificateUrl) URL.revokeObjectURL(activeCertificateUrl);
+    });
+    window.addEventListener('pagehide', () => recordActiveChapterClosed(true));
+  </script>
+</body>
+</html>

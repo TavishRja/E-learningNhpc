@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pending Courses - E-Learning Admin</title>
+  <link rel="stylesheet" href="assets/css/style.css" />
+  <style>
+    .admin-wrap { max-width:1180px; margin:0 auto; padding:36px 5% 64px; }
+    .page-head { display:flex; align-items:flex-end; justify-content:space-between; gap:18px; margin-bottom:22px; }
+    .page-head h1 { color:var(--primary); font-family:var(--font-display); font-size:1.7rem; }
+    .page-head p { color:var(--text-light); margin-top:4px; }
+    .admin-nav-active { background:rgba(255,255,255,.14); color:#fff !important; }
+    .pending-list { display:grid; gap:14px; }
+    .pending-card { background:#fff; border:1px solid var(--border); border-radius:var(--radius); padding:16px; display:grid; grid-template-columns:130px minmax(0,1fr) auto; gap:16px; align-items:center; box-shadow:var(--shadow); }
+    .pending-thumb { width:130px; height:82px; object-fit:cover; border-radius:8px; border:1px solid var(--border); background:#eef2f7; }
+    .pending-info h2 { color:var(--primary); font-family:var(--font-display); font-size:1.02rem; margin-bottom:5px; }
+    .pending-info p { color:var(--text-light); font-size:.8rem; line-height:1.5; }
+    .pending-meta { display:flex; flex-wrap:wrap; gap:6px 14px; color:var(--text-mid); font-size:.77rem; margin-top:8px; }
+    .pending-actions { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:8px; }
+    .pending-actions .btn { padding:8px 12px; font-size:.78rem; }
+    .deny-button { color:#b42318; border-color:#b42318; }
+    .empty-state,.error-state { text-align:center; padding:46px 20px; border:1px dashed var(--border); border-radius:var(--radius); background:#fff; color:var(--text-light); }
+    .error-state { color:#9f3434; }
+    .feedback-modal { position:fixed; inset:0; display:none; align-items:center; justify-content:center; padding:20px; background:rgba(12,22,34,.58); z-index:300; }
+    .feedback-modal.show { display:flex; }
+    .feedback-dialog { width:min(560px,100%); background:#fff; border-radius:10px; padding:22px; box-shadow:0 24px 70px rgba(0,0,0,.28); }
+    .feedback-dialog h2 { color:var(--primary); font-family:var(--font-display); font-size:1.15rem; margin-bottom:8px; }
+    .feedback-dialog p { color:var(--text-mid); font-size:.86rem; line-height:1.5; margin-bottom:12px; }
+    .feedback-dialog textarea { width:100%; min-height:150px; border:1px solid var(--border); border-radius:8px; padding:12px; font:inherit; color:var(--text-dark); resize:vertical; outline:none; }
+    .feedback-dialog textarea:focus { border-color:var(--primary-light); box-shadow:0 0 0 3px rgba(42,91,132,.12); }
+    .feedback-actions { display:flex; justify-content:flex-end; gap:9px; margin-top:14px; }
+    @media (max-width:760px) {
+      .page-head { align-items:flex-start; flex-direction:column; }
+      .pending-card { grid-template-columns:1fr; }
+      .pending-thumb { width:100%; height:180px; }
+      .pending-actions { justify-content:flex-start; }
+    }
+  </style>
+</head>
+<body>
+  <nav class="navbar">
+    <div class="logo"><a href="admin-dashboard.html" style="color:inherit;text-decoration:none;">E-<span>Learning</span></a></div>
+    <ul class="nav-links">
+      <li><a href="admin-dashboard.html">Home</a></li>
+      <li><a class="admin-nav-active" href="admin-courses.html">Courses</a></li>
+      <li><a href="admin-profile.html">Admin</a></li>
+      <li><a href="#" id="nav-logout" style="color:rgba(255,255,255,.75);">Logout</a></li>
+    </ul>
+  </nav>
+
+  <main class="admin-wrap">
+    <header class="page-head">
+      <div>
+        <h1>Course Review</h1>
+        <p>Newest submissions and course records appear first.</p>
+      </div>
+      <a class="btn btn-outline" href="admin-dashboard.html">View Published Courses</a>
+    </header>
+    <section class="pending-list" id="pending-list">
+      <div class="empty-state">Loading course reviews...</div>
+    </section>
+  </main>
+
+  <div class="feedback-modal" id="feedback-modal" aria-hidden="true">
+    <div class="feedback-dialog">
+      <h2 id="feedback-title">Admin Feedback</h2>
+      <p id="feedback-message">Add feedback for the tutor.</p>
+      <textarea id="feedback-text" maxlength="3000"></textarea>
+      <div class="feedback-actions">
+        <button class="btn btn-outline" type="button" id="feedback-cancel">Cancel</button>
+        <button class="btn btn-accent" type="button" id="feedback-submit">Submit</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/script.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      requireAdmin();
+      document.getElementById('nav-logout').addEventListener('click', logoutAdmin);
+      loadPendingCourses();
+    });
+
+    function requireAdmin() {
+      if (!isLoggedIn()) {
+        window.location.href = 'signin.html';
+        return;
+      }
+      if (getRole() !== 'admin') {
+        redirectToDashboard(getRole());
+      }
+    }
+
+    async function loadPendingCourses() {
+      const container = document.getElementById('pending-list');
+      try {
+        const response = await fetch(`${API_URL}/courses/all`, {
+          headers: { Authorization: `Bearer ${getToken()}` }
+        });
+        const payload = await response.json();
+        if (!response.ok) throw new Error(payload.message || 'Could not load course reviews.');
+        const courses = (Array.isArray(payload) ? payload : [])
+          .filter(course => course.tutor_name)
+          .sort((a, b) => reviewSortTime(b) - reviewSortTime(a) || Number(b.id || 0) - Number(a.id || 0));
+        if (!courses.length) {
+          container.innerHTML = '<div class="empty-state">No course review records yet.</div>';
+          return;
+        }
+        container.innerHTML = courses.map(course => `
+          <article class="pending-card">
+            <img class="pending-thumb" src="${getCourseImageUrl(course)}" alt="${escapeCourseText(course.title)}" onerror="this.src='assets/images/course-placeholder.svg'" />
+            <div class="pending-info">
+              <h2>${escapeCourseText(course.title)}</h2>
+              <p>By ${escapeCourseText(course.tutor_name || 'E-Learning Tutor')}</p>
+              <div class="pending-meta">
+                <span>${statusLabel(course.status)}: ${escapeCourseText(formatDate(course.review_submitted_at) || 'Date unavailable')}</span>
+                <span>${Number(course.section_count || 0)} section${Number(course.section_count || 0) === 1 ? '' : 's'}</span>
+                <span>${Number(course.lecture_count || 0)} lecture${Number(course.lecture_count || 0) === 1 ? '' : 's'}</span>
+                <span>${Number(course.enrollment_count || 0)} enrolled</span>
+              </div>
+            </div>
+            <div class="pending-actions">
+              <button class="btn btn-outline" type="button" onclick="viewDetails(${course.id})">View Details</button>
+              ${reviewActionButtons(course)}
+            </div>
+          </article>
+        `).join('');
+      } catch (error) {
+        container.innerHTML = `<div class="error-state">${escapeCourseText(error.message)}</div>`;
+      }
+    }
+
+    async function reviewCourse(courseId, status, deleteRequest) {
+      let feedback = '';
+      if (deleteRequest) {
+        if (status === 'approved') {
+          if (!confirm('Approve this deletion request and remove the course?')) return;
+        } else {
+          feedback = await requestFeedback('Keep Published', 'Why are you denying this deletion request? This feedback will be emailed to the tutor.');
+          if (!feedback) return showToast('Feedback is required when denying a deletion request.', 'error');
+        }
+      } else if (status === 'approved') {
+        if (!confirm('Approve this course? It will not be visible to students until it is published.')) return;
+      } else if (status === 'published') {
+        if (!confirm('Publish this course and make it visible to students?')) return;
+      } else {
+        const prompts = {
+          unpublished: 'Why are you unpublishing this course? This feedback will be emailed to the tutor.',
+          changes_requested: 'What changes are needed? This feedback will be emailed to the tutor.',
+          rejected: 'Why is this course being rejected? This feedback will be emailed to the tutor.'
+        };
+        feedback = await requestFeedback(statusLabel(status), prompts[status] || 'Add feedback for the tutor.');
+        if (!feedback) return showToast('Feedback is required for this action.', 'error');
+      }
+
+      let response = await sendReviewRequest(courseId, status, feedback);
+      let data = await response.json();
+      if (!response.ok && data.message === 'Invalid course or status.') {
+        const legacyStatus = { published: 'approved', rejected: 'denied', unpublished: 'denied' }[status];
+        if (legacyStatus) {
+          response = await sendReviewRequest(courseId, legacyStatus, feedback);
+          data = await response.json();
+        }
+      }
+      if (!response.ok) return showToast(data.message || 'Could not review course.', 'error');
+      showToast(data.emailSent === false ? `${data.message} Tutor email could not be sent.` : data.message, data.emailSent === false ? 'error' : 'success');
+      loadPendingCourses();
+    }
+
+    function sendReviewRequest(courseId, status, feedback) {
+      return fetch(`${API_URL}/courses/review`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${getToken()}`
+        },
+        body: JSON.stringify({ courseId, status, feedback })
+      });
+    }
+
+    function reviewSortTime(course) {
+      const date = new Date(course.review_submitted_at || course.created_at || 0);
+      return Number.isNaN(date.getTime()) ? 0 : date.getTime();
+    }
+
+    function reviewActionButtons(course) {
+      const status = String(course.status || 'draft').toLowerCase();
+      if (status === 'delete_requested') {
+        return `
+          <button class="btn btn-accent" type="button" onclick="reviewCourse(${course.id}, 'approved', true)">Approve Delete</button>
+          <button class="btn btn-outline" type="button" onclick="reviewCourse(${course.id}, 'rejected', true)">Keep Published</button>
+        `;
+      }
+      if (['published', 'approved'].includes(status)) {
+        return `<button class="btn btn-outline deny-button" type="button" onclick="reviewCourse(${course.id}, 'unpublished', false)">Unpublish</button>`;
+      }
+      if (['rejected', 'denied'].includes(status)) {
+        return '';
+      }
+      return `
+        <button class="btn btn-accent" type="button" onclick="reviewCourse(${course.id}, 'published', false)">Publish</button>
+        <button class="btn btn-outline deny-button" type="button" onclick="reviewCourse(${course.id}, 'rejected', false)">Reject</button>
+      `;
+    }
+
+    async function viewDetails(courseId) {
+      window.open(`course-player.html?courseId=${courseId}`, '_blank', 'noopener');
+      setTimeout(loadPendingCourses, 900);
+    }
+
+    function requestFeedback(title, message) {
+      const modal = document.getElementById('feedback-modal');
+      const textarea = document.getElementById('feedback-text');
+      document.getElementById('feedback-title').textContent = title;
+      document.getElementById('feedback-message').textContent = message;
+      textarea.value = '';
+      modal.classList.add('show');
+      modal.setAttribute('aria-hidden', 'false');
+      textarea.focus();
+
+      return new Promise(resolve => {
+        const submit = document.getElementById('feedback-submit');
+        const cancel = document.getElementById('feedback-cancel');
+        const close = (value) => {
+          modal.classList.remove('show');
+          modal.setAttribute('aria-hidden', 'true');
+          submit.onclick = null;
+          cancel.onclick = null;
+          resolve(value);
+        };
+        submit.onclick = () => close(textarea.value.trim());
+        cancel.onclick = () => close('');
+      });
+    }
+
+    function logoutAdmin(event) {
+      event.preventDefault();
+      logout();
+      localStorage.removeItem('lh_role');
+      window.location.href = 'signin.html';
+    }
+
+    function formatDate(value) {
+      const date = new Date(value);
+      if (!value || Number.isNaN(date.getTime())) return '';
+      return date.toLocaleDateString([], { year:'numeric', month:'short', day:'numeric' });
+    }
+
+    function statusLabel(status) {
+      return {
+        submitted: 'Submitted',
+        pending: 'Submitted',
+        under_review: 'Under Review',
+        approved: 'Published',
+        published: 'Published',
+        unpublished: 'Unpublished',
+        rejected: 'Rejected',
+        denied: 'Rejected',
+        changes_requested: 'Changes Requested',
+        delete_requested: 'Delete Requested'
+      }[status] || 'Draft';
+    }
+  </script>
+</body>
+</html>

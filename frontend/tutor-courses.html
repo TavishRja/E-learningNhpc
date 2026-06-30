@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>My Courses - E-Learning</title>
+  <link rel="stylesheet" href="assets/css/style.css" />
+  <style>
+    .page-wrap { max-width:1380px; margin:0 auto; padding:36px 4% 60px; }
+    .page-head { display:flex; justify-content:space-between; align-items:center; gap:16px; margin-bottom:24px; }
+    .page-head h1 { color:var(--primary); font-family:var(--font-display); font-size:1.7rem; }
+    .page-head p { color:var(--text-light); margin-top:4px; }
+    .course-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:16px; }
+    .course-card { height:385px; display:flex; flex-direction:column; overflow:hidden; background:#fff; border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow); }
+    .course-card img { width:100%; height:120px; object-fit:cover; background:#eef2f7; }
+    .course-body { display:flex; flex:1; flex-direction:column; padding:14px; min-height:0; }
+    .course-body h2 { color:var(--primary); font-family:var(--font-display); font-size:.95rem; margin:8px 0 5px; }
+    .course-description { color:var(--text-light); font-size:.76rem; line-height:1.45; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; overflow:hidden; }
+    .date-line { color:var(--text-mid); font-size:.72rem; line-height:1.45; margin-top:7px; }
+    .course-actions { display:grid; gap:6px; margin-top:auto; padding-top:10px; }
+    .course-actions .btn { width:100%; padding:7px 10px; font-size:.76rem; text-align:center; }
+    .status-badge { align-self:flex-start; padding:4px 11px; border-radius:20px; font-size:.7rem; font-weight:700; }
+    .status-draft { background:#eef2f7; color:#334155; }
+    .status-submitted,.status-under_review { background:#fff3e0; color:#e65100; }
+    .status-approved { background:#e8f5e9; color:#2e7d32; }
+    .status-published { background:#e1f7e6; color:#1f6b3d; }
+    .status-unpublished { background:#eef2f7; color:#475569; }
+    .status-rejected,.status-denied,.status-changes_requested { background:#fce4ec; color:#c62828; }
+    .status-delete_requested { background:#fff1f1; color:#b42318; }
+    .delete-button { color:#b42318; border-color:#b42318; }
+    .empty-state { grid-column:1/-1; padding:55px; text-align:center; color:var(--text-light); background:#fff; border:1px solid var(--border); border-radius:var(--radius); }
+    @media(max-width:1050px) { .course-grid { grid-template-columns:repeat(3,minmax(0,1fr)); } }
+    @media(max-width:760px) { .course-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+    @media(max-width:620px) { .page-head { align-items:flex-start; flex-direction:column; } }
+    @media(max-width:480px) { .course-grid { grid-template-columns:1fr; } }
+  </style>
+</head>
+<body>
+  <nav class="navbar">
+    <div class="logo"><a href="index.html" style="color:inherit;text-decoration:none;">E-Learning</a></div>
+    <ul class="nav-links">
+      <li><a href="tutor-dashboard.html">Home</a></li>
+      <li><a href="tutor-courses.html">My Courses</a></li>
+      <li><a href="#" id="nav-logout">Logout</a></li>
+    </ul>
+  </nav>
+
+  <main class="page-wrap">
+    <header class="page-head">
+      <div><h1>My Courses</h1><p>Manage, preview, and submit your courses.</p></div>
+      <a class="btn btn-accent" href="tutor-create-course.html">+ Create Course</a>
+    </header>
+    <section class="course-grid" id="course-grid"><div class="empty-state">Loading your courses...</div></section>
+  </main>
+
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/script.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      if (!isLoggedIn() || getRole() !== 'tutor') {
+        window.location.href = 'signin.html';
+        return;
+      }
+      loadCourses();
+    });
+
+    function statusLabel(status) {
+      return {
+        draft:'Draft',
+        submitted:'Submitted',
+        under_review:'Under Review',
+        approved:'Approved',
+        published:'Published',
+        unpublished:'Unpublished',
+        rejected:'Rejected',
+        denied:'Rejected',
+        changes_requested:'Changes Requested',
+        delete_requested:'Delete Requested'
+      }[status] || 'Draft';
+    }
+
+    async function loadCourses() {
+      const response = await fetch(`${API_URL}/courses/my`, {
+        headers: { Authorization: `Bearer ${getToken()}` }
+      });
+      const courses = await response.json();
+      const grid = document.getElementById('course-grid');
+      if (!response.ok || !Array.isArray(courses)) {
+        grid.innerHTML = `<div class="empty-state">${escapeCourseText(courses.message || 'Could not load courses.')}</div>`;
+        return;
+      }
+      if (!courses.length) {
+        grid.innerHTML = '<div class="empty-state">No courses yet. Use Create Course to get started.</div>';
+        return;
+      }
+      grid.innerHTML = courses.map(course => `
+        <article class="course-card">
+          <img src="${getCourseImageUrl(course)}" alt="${escapeCourseText(course.title)}" onerror="this.src='assets/images/course-placeholder.svg'" />
+          <div class="course-body">
+            <span class="status-badge status-${course.status}">${statusLabel(course.status)}</span>
+            <h2>${escapeCourseText(course.title)}</h2>
+            <p class="course-description">${escapeCourseText(courseDescriptionText(course.description) || 'No description added.')}</p>
+            ${courseDateLine(course)}
+            <div class="course-actions">
+              <a class="btn btn-primary" href="course-player.html?courseId=${course.id}">Edit / Preview</a>
+              ${['draft', 'rejected', 'denied', 'changes_requested', 'unpublished'].includes(course.status)
+                ? `<button class="btn btn-accent" onclick="submitForReview(${course.id}, this)">Submit for Review</button>`
+                : ''}
+              <button class="btn btn-outline delete-button" onclick="deleteCourse(${course.id}, '${course.status}')">
+                ${course.status === 'published' ? 'Request Delete' : course.status === 'delete_requested' ? 'Delete Requested' : 'Delete Course'}
+              </button>
+            </div>
+          </div>
+        </article>
+      `).join('');
+    }
+
+    async function submitForReview(courseId, button) {
+      if (!confirm('Submit this course to the admin for review?')) return;
+      const response = await fetch(`${API_URL}/courses/submit`, {
+        method:'POST',
+        headers:{ 'Content-Type':'application/json', Authorization:`Bearer ${getToken()}` },
+        body:JSON.stringify({ courseId })
+      });
+      const data = await response.json();
+      if (!response.ok) return showToast(data.message || 'Could not submit course.', 'error');
+      queueToast(data.message || 'Course submitted for review successfully.', 'success');
+      window.location.href = 'tutor-dashboard.html';
+    }
+
+    async function deleteCourse(courseId, status) {
+      const warning = status === 'published'
+        ? 'Request deletion for this published course? It will be unpublished now and removed only after admin approval.'
+        : status === 'delete_requested'
+          ? 'Deletion is already waiting for admin approval.'
+          : 'Permanently delete this course and all of its content? This cannot be undone.';
+      if (status === 'delete_requested') return showToast(warning, 'error');
+      if (!confirm(warning)) return;
+      const response = await fetch(`${API_URL}/courses/${courseId}`, {
+        method:'DELETE',
+        headers:{ Authorization:`Bearer ${getToken()}` }
+      });
+      const data = await response.json();
+      if (!response.ok) return showToast(data.message || 'Could not delete course.', 'error');
+      showToast(data.message, 'success');
+      loadCourses();
+    }
+
+    function courseDateLine(course) {
+      const submitted = formatDate(course.review_submitted_at);
+      const approved = formatDate(course.approved_at);
+      const rejected = formatDate(course.denied_at);
+      if (course.status === 'submitted' && submitted) return `<div class="date-line">Submitted on ${escapeCourseText(submitted)}</div>`;
+      if (course.status === 'under_review' && submitted) return `<div class="date-line">Under review since ${escapeCourseText(submitted)}</div>`;
+      if (course.status === 'approved' && approved) return `<div class="date-line">Approved on ${escapeCourseText(approved)}</div>`;
+      if (course.status === 'published' && approved) return `<div class="date-line">Published on ${escapeCourseText(approved)}</div>`;
+      if (['rejected', 'denied'].includes(course.status) && rejected) return `<div class="date-line">Rejected on ${escapeCourseText(rejected)}</div>`;
+      return submitted ? `<div class="date-line">Last sent for review on ${escapeCourseText(submitted)}</div>` : '';
+    }
+
+    function formatDate(value) {
+      const date = new Date(value);
+      if (!value || Number.isNaN(date.getTime())) return '';
+      return date.toLocaleDateString([], { year:'numeric', month:'short', day:'numeric' });
+    }
+  </script>
+</body>
+</html>

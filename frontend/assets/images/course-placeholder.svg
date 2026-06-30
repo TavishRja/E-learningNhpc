@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450" role="img" aria-labelledby="title description">
+  <title id="title">E-Learning course placeholder</title>
+  <desc id="description">A simple abstract learning illustration</desc>
+  <defs>
+    <linearGradient id="background" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#173d5f"/>
+      <stop offset="1" stop-color="#2b6f83"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="450" fill="url(#background)"/>
+  <circle cx="660" cy="90" r="120" fill="#ffffff" opacity=".08"/>
+  <circle cx="120" cy="390" r="170" fill="#f2a65a" opacity=".18"/>
+  <rect x="230" y="145" width="340" height="190" rx="18" fill="#fff" opacity=".96"/>
+  <path d="M270 190h150v18H270zm0 45h260v14H270zm0 35h220v14H270z" fill="#2b6f83" opacity=".8"/>
+  <path d="M400 335l-130-38v-22l130 38 130-38v22z" fill="#f2a65a"/>
+  <text x="400" y="405" fill="#fff" font-family="Arial, sans-serif" font-size="32" font-weight="700" text-anchor="middle">E-Learning Course</text>
+</svg>
