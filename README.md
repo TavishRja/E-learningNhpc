@@ -2,6 +2,9 @@
 
 E-Learning LMS is a full-stack Learning Management System built with HTML, CSS, JavaScript, Node.js, Express, and MySQL. It supports role-based access for students, tutors, and admins, with course management, enrollment, discussions, file uploads, OTP verification, and certificate generation.
 
+Maintained by TavishRja.
+Repository: https://github.com/TavishRja/E-learningNhpc
+
 ## Features
 
 - User signup and signin with JWT authentication
