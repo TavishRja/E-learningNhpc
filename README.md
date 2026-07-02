@@ -37,8 +37,8 @@ E-Learning LMS is a full-stack Learning Management System built with HTML, CSS, 
 
 ## 1. Clone the Repository
 
-git clone https://github.com/Saumya6250/LearnHub-LMS.git
-cd LearnHub-LMS
+git clone https://github.com/TavishRja/E-learningNhpc.git
+cd E-learningNhpc
 
 ## 2. Install Backend Dependencies
 
@@ -124,6 +124,6 @@ If your IDE still shows older tabs like `backend/routes/auth.js` or `backend/db.
 
 ## Author
 
-Saumya
+TavishRja
 
-GitHub: https://github.com/Saumya6250
+GitHub: https://github.com/TavishRja
