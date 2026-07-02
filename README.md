@@ -124,6 +124,6 @@ If your IDE still shows older tabs like `backend/routes/auth.js` or `backend/db.
 
 ## Author
 
-Saumya
+Tavish Rja
 
-GitHub: https://github.com/Saumya6250
+GitHub: https://github.com/TavishRja/E-learningNhpc
